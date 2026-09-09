@@ -3,12 +3,12 @@
 
 ---
 
-## 📌 Overview
+## Overview
 **ResumeLens** is an evidence-based AI resume analyzer and ATS optimization platform. It helps candidates make their resumes stronger before applying by evaluating structure, hard/technical skills, quantifiable impact in experience bullets, ATS parser compatibility, and job description alignment.
 
 ---
 
-## ✨ Core Features
+## Core Features
 
 1. **Evidence-Based Scoring (0–100)**:
    - Dynamic radial score donut gauge measuring candidate strength.
@@ -32,7 +32,7 @@
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+##  Architecture & Tech Stack
 
 ```
 +-------------------------------------------------------------+
@@ -54,7 +54,7 @@
 
 ---
 
-## 🚀 How to Run the Project
+##  How to Run the Project
 
 ### 1. Instant Standalone Run (Zero Setup Required)
 Simply open `frontend/resumelens.html` directly in any web browser:
@@ -72,5 +72,5 @@ npm run dev
 
 ---
 
-## 👥 Contributors & Collaboration
+##  Contributors & Collaboration
 - **GitHub Repository**: [sanchitamoundekar13/analyzer](https://github.com/sanchitamoundekar13/analyzer)
