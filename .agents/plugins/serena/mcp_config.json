@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "npx",
+      "args": ["-y", "serena-mcp@latest"],
+      "env": {
+        "SERENA_ENABLE": "true"
+      }
+    }
+  }
+}
