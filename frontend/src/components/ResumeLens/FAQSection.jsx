@@ -1,30 +1,50 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ShieldCheck } from 'lucide-react';
 
 export const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState(0);
 
   const faqs = [
     {
-      q: 'How does ResumeLens calculate the evidence-based score?',
-      a: 'Our scoring engine evaluates your resume across 6 critical dimensions: ATS parser readability, technical & hard skills presence, quantifiable impact in experience bullets, target job description relevance, education structure, and grammatical clarity.',
+      q: 'How is the evidence-based score calculated?',
+      a: 'Unlike arbitrary LLM wrappers, ResumeLens uses a deterministic 7-factor mathematical engine: ATS & Parsing (20%), Job Match (20%), Skills Coverage (20%), Experience Evidence (15%), Resume Structure (10%), Writing Quality (10%), and Education/Projects (5%). Every point gained or deducted is backed by verifiable text signals.'
     },
     {
-      q: 'Will my resume data remain secure and confidential?',
-      a: 'Yes, 100%. We do not sell your personal information or store your resume beyond your active session. Files are parsed inside isolated ephemeral sandboxes.',
+      q: 'What does ATS mean and why does it matter?',
+      a: 'Applicant Tracking Systems (ATS) are automated screening tools used by over 90% of companies (e.g. Workday, Greenhouse, Taleo) to filter incoming resumes. If your resume uses non-standard headings, multi-column tables, or lacks target keywords, the parser cannot extract your data and your application gets discarded before a human recruiter reads it.'
     },
     {
-      q: 'What is ATS compatibility and why does it matter?',
-      a: 'Applicant Tracking Systems (ATS) are automated screening tools used by over 90% of Fortune 500 companies. If your resume contains complex tables, non-standard fonts, or missing keywords, ATS parsers may misread or discard your application before a human recruiter sees it.',
+      q: 'Do you invent metrics or achievements in bullet rewrites?',
+      a: 'Never. One of our core differentiators is our Zero-Fabrication pledge. We structure your experience using strong Action-Verb + Task + Outcome frameworks and clearly mark placeholders where you should insert your real metrics. Fabricating fake statistics (like "increased sales by 42%") creates severe interview risk.'
     },
     {
-      q: 'Can I test multiple roles or job descriptions?',
-      a: 'Absolutely. You can paste any specific job description to benchmark your keyword match and receive tailored keyword recommendations.',
+      q: 'How do you protect my resume and privacy?',
+      a: 'Your resume is encrypted in transit and processed within secure, ephemeral execution sandboxes. We never sell your personal data, and we do NOT use your resume to train public AI models.'
+    },
+    {
+      q: 'Is my resume stored permanently on your servers?',
+      a: 'No. Resumes uploaded for free and standard scans are parsed in-memory and discarded once your analysis report session concludes.'
+    },
+    {
+      q: 'Can I compare my resume against a specific target Job Description?',
+      a: 'Yes! In the Analyzer Studio, you can paste any job description. ResumeLens calculates your overall match percentage, highlights missing required skills, and provides "Don\'t Add This" guardrails.'
     },
     {
       q: 'Which file formats are supported?',
-      a: 'We support standard PDF (.pdf), Microsoft Word (.docx, .doc), and plain text (.txt) files.',
+      a: 'ResumeLens supports standard PDF (.pdf), Microsoft Word (.docx), and Plain Text (.txt, .md) documents up to 10MB.'
     },
+    {
+      q: 'How accurate is the score?',
+      a: 'Our scoring rules are aligned with real recruiter heuristics and ATS parsing specifications across major corporate applicant portals.'
+    },
+    {
+      q: 'Can I download or export my report?',
+      a: 'Yes, you can click "Export PDF Report" from your Report Dashboard to download a printable diagnostic summary with score breakdowns and keyword checklists.'
+    },
+    {
+      q: 'Does ResumeLens guarantee interviews?',
+      a: 'While no software can guarantee an interview, optimizing your ATS compliance, keyword overlap, and quantified metrics dramatically increases your callback probability.'
+    }
   ];
 
   return (
@@ -33,14 +53,18 @@ export const FAQSection = () => {
         
         <div className="text-center space-y-3 mb-16">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
             <span>Frequently Asked Questions</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Got Questions? We’ve Got Answers.
           </h2>
+          <p className="text-sm text-slate-500 max-w-lg mx-auto">
+            Everything you need to know about evidence-based scoring, privacy, and ATS optimization.
+          </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {faqs.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
@@ -50,7 +74,7 @@ export const FAQSection = () => {
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? -1 : idx)}
-                  className="w-full p-6 text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-blue-600 transition-colors"
+                  className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-blue-600 transition-colors cursor-pointer"
                 >
                   <span>{faq.q}</span>
                   <ChevronDown
@@ -60,7 +84,7 @@ export const FAQSection = () => {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-50">
+                  <div className="px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-50">
                     {faq.a}
                   </div>
                 )}
