@@ -1,0 +1,65 @@
+{
+  "category": "Backend Development",
+  "skills": [
+    {
+      "name": "Node.js",
+      "aliases": ["Node", "NodeJS", "node.js"],
+      "importance": "high",
+      "related": ["Express.js", "NestJS", "TypeScript", "REST API"]
+    },
+    {
+      "name": "Python",
+      "aliases": ["python3", "Python 3"],
+      "importance": "high",
+      "related": ["FastAPI", "Django", "Flask", "Pandas"]
+    },
+    {
+      "name": "FastAPI",
+      "aliases": ["Fast API", "fastapi"],
+      "importance": "high",
+      "related": ["Python", "Pydantic", "Uvicorn", "REST API"]
+    },
+    {
+      "name": "Django",
+      "aliases": ["Django REST Framework", "DRF"],
+      "importance": "medium",
+      "related": ["Python", "PostgreSQL", "ORM"]
+    },
+    {
+      "name": "Java",
+      "aliases": ["Java 17", "Java 21", "Core Java"],
+      "importance": "high",
+      "related": ["Spring Boot", "Microservices", "Hibernate"]
+    },
+    {
+      "name": "Spring Boot",
+      "aliases": ["SpringBoot", "Spring Framework"],
+      "importance": "high",
+      "related": ["Java", "Microservices", "REST API"]
+    },
+    {
+      "name": "Go",
+      "aliases": ["Golang", "go-lang"],
+      "importance": "high",
+      "related": ["gRPC", "Microservices", "Docker", "Kubernetes"]
+    },
+    {
+      "name": "REST API",
+      "aliases": ["RESTful APIs", "RESTful Web Services", "REST APIs"],
+      "importance": "high",
+      "related": ["HTTP", "JSON", "OpenAPI", "Swagger"]
+    },
+    {
+      "name": "gRPC",
+      "aliases": ["Protocol Buffers", "Protobuf"],
+      "importance": "medium",
+      "related": ["Microservices", "Go", "Backend Architecture"]
+    },
+    {
+      "name": "Microservices",
+      "aliases": ["Microservice Architecture", "Distributed Systems"],
+      "importance": "high",
+      "related": ["Docker", "Kubernetes", "Event-Driven Architecture", "Kafka"]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "category": "Databases & Storage",
+  "skills": [
+    {
+      "name": "PostgreSQL",
+      "aliases": ["Postgres", "Postgre", "psql", "pgvector"],
+      "importance": "high",
+      "related": ["SQL", "Relational Database", "Prisma", "TypeORM"]
+    },
+    {
+      "name": "MongoDB",
+      "aliases": ["Mongo", "Mongoose", "NoSQL"],
+      "importance": "high",
+      "related": ["Node.js", "Express.js", "Document Database"]
+    },
+    {
+      "name": "Redis",
+      "aliases": ["In-Memory Caching", "Redis Queue", "Upstash"],
+      "importance": "high",
+      "related": ["Caching", "Rate Limiting", "PubSub", "Celery"]
+    },
+    {
+      "name": "MySQL",
+      "aliases": ["MariaDB", "SQL Server"],
+      "importance": "medium",
+      "related": ["SQL", "Relational Database"]
+    },
+    {
+      "name": "Elasticsearch",
+      "aliases": ["ELK Stack", "OpenSearch"],
+      "importance": "medium",
+      "related": ["Vector Search", "Full-Text Search", "Log Analytics"]
+    },
+    {
+      "name": "Kafka",
+      "aliases": ["Apache Kafka", "Event Streaming"],
+      "importance": "high",
+      "related": ["Microservices", "Event-Driven", "RabbitMQ"]
+    }
+  ]
+}

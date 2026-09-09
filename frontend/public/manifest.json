@@ -1,7 +1,7 @@
 {
-  "short_name": "KisanSetu",
-  "name": "KisanSetu - Intelligent Procurement Slot & Queue System",
-  "description": "Smart procurement queue, slot booking and farmer procurement management system",
+  "short_name": "ResumeLens",
+  "name": "ResumeLens - Evidence-Based AI Resume Analyzer & ATS Scanner",
+  "description": "Upload your resume and get an instant evidence-based analysis of ATS compatibility, keyword gaps, and bullet point improvements.",
   "icons": [
     {
       "src": "/favicon.ico",
@@ -10,8 +10,8 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#0B2545",
-  "theme_color": "#137547",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
   "display": "standalone",
   "orientation": "portrait-primary"
 }

@@ -1,0 +1,83 @@
+{
+  "category": "Frontend Development",
+  "skills": [
+    {
+      "name": "React",
+      "aliases": ["React.js", "ReactJS", "React JS", "react"],
+      "importance": "high",
+      "related": ["TypeScript", "Next.js", "Redux", "Tailwind CSS"]
+    },
+    {
+      "name": "TypeScript",
+      "aliases": ["TS", "type-script", "typescript"],
+      "importance": "high",
+      "related": ["JavaScript", "React", "Node.js"]
+    },
+    {
+      "name": "JavaScript",
+      "aliases": ["JS", "ES6", "ES2020", "ECMAScript"],
+      "importance": "high",
+      "related": ["TypeScript", "HTML5", "CSS3"]
+    },
+    {
+      "name": "Next.js",
+      "aliases": ["NextJS", "Next js", "next.js"],
+      "importance": "high",
+      "related": ["React", "SSR", "Vercel"]
+    },
+    {
+      "name": "Vue.js",
+      "aliases": ["Vue", "VueJS", "Vue 3", "Nuxt.js"],
+      "importance": "medium",
+      "related": ["Pinia", "Vuex", "JavaScript"]
+    },
+    {
+      "name": "Angular",
+      "aliases": ["Angular 2+", "AngularJS", "Angular 14+"],
+      "importance": "medium",
+      "related": ["TypeScript", "RxJS", "NgRx"]
+    },
+    {
+      "name": "Tailwind CSS",
+      "aliases": ["Tailwind", "TailwindCSS"],
+      "importance": "high",
+      "related": ["CSS3", "PostCSS", "shadcn/ui"]
+    },
+    {
+      "name": "HTML5",
+      "aliases": ["HTML", "Semantic HTML"],
+      "importance": "high",
+      "related": ["CSS3", "Web Accessibility", "WCAG"]
+    },
+    {
+      "name": "CSS3",
+      "aliases": ["CSS", "SCSS", "SASS", "Flexbox", "CSS Grid"],
+      "importance": "high",
+      "related": ["Tailwind CSS", "Responsive Design"]
+    },
+    {
+      "name": "Redux",
+      "aliases": ["Redux Toolkit", "RTK", "Redux Thunk"],
+      "importance": "medium",
+      "related": ["React", "Zustand", "State Management"]
+    },
+    {
+      "name": "Zustand",
+      "aliases": ["zustand"],
+      "importance": "medium",
+      "related": ["React", "Redux", "State Management"]
+    },
+    {
+      "name": "GraphQL",
+      "aliases": ["Apollo Client", "Relay", "graphql"],
+      "importance": "medium",
+      "related": ["REST APIs", "React", "Node.js"]
+    },
+    {
+      "name": "Webpack",
+      "aliases": ["Vite", "Turbopack", "Rollup", "Parcel", "Babel"],
+      "importance": "medium",
+      "related": ["JavaScript", "Build Tools"]
+    }
+  ]
+}

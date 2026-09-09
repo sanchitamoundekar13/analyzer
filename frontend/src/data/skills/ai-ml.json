@@ -1,0 +1,53 @@
+{
+  "category": "AI, Machine Learning & Data",
+  "skills": [
+    {
+      "name": "Machine Learning",
+      "aliases": ["ML", "Supervised Learning", "Unsupervised Learning"],
+      "importance": "high",
+      "related": ["Scikit-Learn", "Python", "Feature Engineering"]
+    },
+    {
+      "name": "PyTorch",
+      "aliases": ["pytorch", "Torch"],
+      "importance": "high",
+      "related": ["Deep Learning", "Transformers", "Computer Vision", "NLP"]
+    },
+    {
+      "name": "TensorFlow",
+      "aliases": ["Keras", "TF2"],
+      "importance": "high",
+      "related": ["Deep Learning", "Neural Networks"]
+    },
+    {
+      "name": "Generative AI",
+      "aliases": ["LLMs", "Large Language Models", "OpenAI", "LangChain", "LlamaIndex", "Prompt Engineering", "RAG"],
+      "importance": "high",
+      "related": ["Vector Embeddings", "PyTorch", "Hugging Face"]
+    },
+    {
+      "name": "NLP",
+      "aliases": ["Natural Language Processing", "spaCy", "NLTK", "BERT", "sentence-transformers"],
+      "importance": "high",
+      "related": ["Text Analysis", "Tokenization", "Named Entity Recognition"]
+    },
+    {
+      "name": "Computer Vision",
+      "aliases": ["OpenCV", "YOLO", "Image Processing", "OCR", "Tesseract"],
+      "importance": "medium",
+      "related": ["PyTorch", "Deep Learning"]
+    },
+    {
+      "name": "Pandas",
+      "aliases": ["NumPy", "SciPy", "Data Wrangling"],
+      "importance": "high",
+      "related": ["Python", "Data Analysis", "SQL"]
+    },
+    {
+      "name": "MLOps",
+      "aliases": ["MLflow", "Kubeflow", "Model Deployment", "Triton"],
+      "importance": "high",
+      "related": ["Docker", "Kubernetes", "AWS"]
+    }
+  ]
+}

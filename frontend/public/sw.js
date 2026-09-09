@@ -1,5 +1,5 @@
-// KisanSetu Offline-First Service Worker
-const CACHE_NAME = 'kisansetu-cache-v2';
+// ResumeLens Offline-First Service Worker
+const CACHE_NAME = 'resumelens-cache-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

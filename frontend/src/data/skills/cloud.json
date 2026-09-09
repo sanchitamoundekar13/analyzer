@@ -1,0 +1,47 @@
+{
+  "category": "Cloud & DevOps",
+  "skills": [
+    {
+      "name": "AWS",
+      "aliases": ["Amazon Web Services", "EC2", "S3", "AWS Lambda", "CloudFormation", "IAM", "ECS", "EKS"],
+      "importance": "high",
+      "related": ["Cloud Architecture", "Docker", "Terraform", "Serverless"]
+    },
+    {
+      "name": "Docker",
+      "aliases": ["Docker Container", "Containerization", "docker-compose"],
+      "importance": "high",
+      "related": ["Kubernetes", "CI/CD", "Microservices"]
+    },
+    {
+      "name": "Kubernetes",
+      "aliases": ["K8s", "k8s", "Helm"],
+      "importance": "high",
+      "related": ["Docker", "Cloud Native", "DevOps"]
+    },
+    {
+      "name": "CI/CD",
+      "aliases": ["Continuous Integration", "Continuous Deployment", "GitHub Actions", "GitLab CI", "Jenkins"],
+      "importance": "high",
+      "related": ["DevOps", "Docker", "Automated Testing"]
+    },
+    {
+      "name": "Terraform",
+      "aliases": ["Infrastructure as Code", "IaC"],
+      "importance": "high",
+      "related": ["AWS", "Cloud Infrastructure", "DevOps"]
+    },
+    {
+      "name": "Google Cloud",
+      "aliases": ["GCP", "Google Cloud Platform", "BigQuery", "Cloud Run", "GKE"],
+      "importance": "high",
+      "related": ["AWS", "Kubernetes", "Data Engineering"]
+    },
+    {
+      "name": "Azure",
+      "aliases": ["Microsoft Azure", "Azure DevOps", "Azure Functions"],
+      "importance": "medium",
+      "related": ["Cloud Computing", "C#", ".NET"]
+    }
+  ]
+}
