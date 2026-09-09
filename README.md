@@ -3,18 +3,18 @@
 
 ---
 
-## 📌 Overview & Official Specifications
+##  Overview & Official Specifications
 **ResumeLens** is an AI/ML-powered, evidence-based resume analysis and career intelligence platform. It analyzes a candidate's resume, evaluates ATS layout compatibility, identifies relevant and missing skills, matches against target Job Descriptions (JD), extracts verified evidence, and provides explainable, non-hallucinating recommendations.
 
-> 📄 **Product Requirements Document**: [PRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/PRD.md) (v1.0)  
-> 🛠️ **Technical Requirements Document**: [TRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/TRD.md) (v1.0)  
-> 📐 **Backend Schemas Specification**: [BACKEND_SCHEMAS.md](file:///c:/Users/bhavi/Downloads/ResumeLens/BACKEND_SCHEMAS.md) (v1.0)  
-> 🧭 **Application Flow Specification**: [APPLICATION_FLOW.md](file:///c:/Users/bhavi/Downloads/ResumeLens/APPLICATION_FLOW.md) (v1.0)  
-> 📖 **Project Operational Requirements**: [PROJECT_OPR.md](file:///c:/Users/bhavi/Downloads/ResumeLens/PROJECT_OPR.md)
+>  **Product Requirements Document**: [PRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/PRD.md) (v1.0)  
+>  **Technical Requirements Document**: [TRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/TRD.md) (v1.0)  
+>  **Backend Schemas Specification**: [BACKEND_SCHEMAS.md](file:///c:/Users/bhavi/Downloads/ResumeLens/BACKEND_SCHEMAS.md) (v1.0)  
+>  **Application Flow Specification**: [APPLICATION_FLOW.md](file:///c:/Users/bhavi/Downloads/ResumeLens/APPLICATION_FLOW.md) (v1.0)  
+>  **Project Operational Requirements**: [PROJECT_OPR.md](file:///c:/Users/bhavi/Downloads/ResumeLens/PROJECT_OPR.md)
 
 ---
 
-## ✨ Core Features & Deterministic 7-Dimension Scoring
+##  Core Features & Deterministic 7-Dimension Scoring
 
 1. **Evidence-Based Deterministic Scoring (0–100)**:
    - Every point is mathematically grounded with detectable resume facts:
@@ -37,10 +37,10 @@
 
 4. **Deep Real ATS Analyzer & Visual Resume Scanner**:
    - Interactive document layout simulator with color-coded inspection overlays:
-     - 🔴 **ATS Problem** (e.g., 2-column layout or embedded table)
-     - 🟡 **Weak Bullet** (e.g., passive phrasing)
-     - 🔵 **Missing Skill** (e.g., Docker/AWS from JD)
-     - 🟢 **Verified Evidence** (e.g., verified metric outcome)
+     -  **ATS Problem** (e.g., 2-column layout or embedded table)
+     -  **Weak Bullet** (e.g., passive phrasing)
+     -  **Missing Skill** (e.g., Docker/AWS from JD)
+     -  **Verified Evidence** (e.g., verified metric outcome)
 
 5. **Evidence Vault & Anti-Hallucination Safe AI**:
    - Extracts verified candidate claims with proof quotes and confidence ratings.
@@ -53,9 +53,9 @@
 
 ---
 
-## 🛠️ System Architecture & Tech Stack
+## System Architecture & Tech Stack
 
-```text
+
                     ResumeLens
                         │
           ┌─────────────┴─────────────┐
@@ -75,7 +75,7 @@
                 PostgreSQL + pgvector
                         │
                 Redis + Object Storage
-```
+
 
 ### 🔹 Layer Breakdown
 
@@ -100,7 +100,7 @@
 
 ---
 
-## 🚀 How to Run the Project
+##  How to Run the Project
 
 ### 1. Instant Standalone Run (Zero Setup Required)
 Simply open `frontend/resumelens.html` directly in any web browser:
@@ -118,5 +118,5 @@ npm run dev
 
 ---
 
-## 👥 Contributors & Collaboration
+##  Contributors & Collaboration
 - **GitHub Repository**: [sanchitamoundekar13/analyzer](https://github.com/sanchitamoundekar13/analyzer)
