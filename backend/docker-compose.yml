@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # 1. High-Availability Nginx Reverse Proxy / Load Balancer
+  load_balancer:
+    image: nginx:alpine
+    container_name: kisansetu_load_balancer
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app_node_01
+      - app_node_02
+    restart: always
+
+  # 2. KisanSetu App Worker Node 01 (Primary Leader)
+  app_node_01:
+    build: .
+    container_name: kisansetu_app_node_01
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - NODE_ID=app-node-01
+      - ZONE=NIC-Cloud-UP-West1
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres_master
+      - redis
+    restart: always
+
+  # 3. KisanSetu App Worker Node 02 (Worker Replica)
+  app_node_02:
+    build: .
+    container_name: kisansetu_app_node_02
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - NODE_ID=app-node-02
+      - ZONE=NIC-Cloud-UP-West2
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres_master
+      - redis
+    restart: always
+
+  # 4. PostgreSQL 16 Enterprise Master (Write/Transactions)
+  postgres_master:
+    image: postgres:16-alpine
+    container_name: kisansetu_postgres_master
+    environment:
+      POSTGRES_DB: kisansetu_db
+      POSTGRES_USER: kisansetu_admin
+      POSTGRES_PASSWORD: GovTechSecurePassword2026!
+    volumes:
+      - pg_master_data:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    restart: always
+
+  # 5. PostgreSQL 16 Read Replica (Analytics & Yard Boards)
+  postgres_replica:
+    image: postgres:16-alpine
+    container_name: kisansetu_postgres_replica
+    environment:
+      POSTGRES_DB: kisansetu_db
+      POSTGRES_USER: kisansetu_admin
+      POSTGRES_PASSWORD: GovTechSecurePassword2026!
+    depends_on:
+      - postgres_master
+    restart: always
+
+  # 6. Redis 7 High-Throughput In-Memory Cache & Distributed Lock
+  redis:
+    image: redis:7-alpine
+    container_name: kisansetu_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+volumes:
+  pg_master_data:

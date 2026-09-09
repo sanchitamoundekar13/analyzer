@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResumeLens — Evidence-Based Resume Analysis</title>
+  <meta name="description" content="Make your resume stronger before you apply. Upload your resume and get a clear analysis of its structure, skills, experience, and ATS compatibility.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#EEF4FF',
+              100: '#E0EBFF',
+              600: '#2550EB',
+              700: '#1D3EC8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- React 18 & Babel for standalone instant rendering -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .bg-vertical-grid {
+      background-size: 80px 100%;
+      background-image: linear-gradient(
+        to right,
+        rgba(226, 232, 240, 0.55) 1px,
+        transparent 1px
+      );
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-white text-slate-900 antialiased selection:bg-blue-600 selection:text-white min-h-screen flex flex-col">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const SAMPLES = [
+      {
+        id: "john-doe",
+        fileName: "John_Doe_Resume.pdf",
+        candidateName: "John Doe",
+        role: "Senior Full Stack Engineer",
+        pageCount: 2,
+        analyzedAt: "analyzed just now",
+        overallScore: 82,
+        status: "Good",
+        scores: {
+          ats: { current: 18, max: 20, label: "ATS & Structure" },
+          skills: { current: 16, max: 20, label: "Skills" },
+          experience: { current: 17, max: 20, label: "Experience" },
+          jobMatch: { current: 15, max: 20, label: "Job Match" },
+          education: { current: 9, max: 10, label: "Education & Projects" },
+          writing: { current: 7, max: 10, label: "Writing Quality" },
+        },
+        keyInsights: [
+          { positive: true, text: "Strong technical skills" },
+          { positive: true, text: "Good project experience" },
+          { positive: false, text: "Missing AWS and Docker keywords" },
+          { positive: false, text: "Add measurable results to experience bullets" }
+        ],
+        missingKeywords: ["AWS (EC2/S3/Lambda)", "Docker Containerization", "CI/CD Pipelines", "Kubernetes", "Microservices"],
+        foundKeywords: ["React.js", "Node.js", "TypeScript", "REST APIs", "PostgreSQL", "Tailwind CSS", "Git"],
+        rewrites: [
+          {
+            original: "Worked on frontend user interface and fixed bugs on customer portal.",
+            improved: "Architected responsive React/TypeScript client portal reducing page load latency by 38% and resolving 40+ high-priority bug tickets.",
+            impact: "+24% recruiter engagement"
+          },
+          {
+            original: "Responsible for backend database queries and maintaining endpoints.",
+            improved: "Optimized Node.js/PostgreSQL query throughput for 120k+ daily transactions, boosting API response time by 45%.",
+            impact: "+30% ATS keyword relevance"
+          }
+        ]
+      },
+      {
+        id: "sarah-jenkins",
+        fileName: "Sarah_Jenkins_Product_Lead.pdf",
+        candidateName: "Sarah Jenkins",
+        role: "Lead Product Manager",
+        pageCount: 2,
+        analyzedAt: "analyzed 2 mins ago",
+        overallScore: 91,
+        status: "Excellent",
+        scores: {
+          ats: { current: 20, max: 20, label: "ATS & Structure" },
+          skills: { current: 18, max: 20, label: "Skills" },
+          experience: { current: 19, max: 20, label: "Experience" },
+          jobMatch: { current: 18, max: 20, label: "Job Match" },
+          education: { current: 9, max: 10, label: "Education & Projects" },
+          writing: { current: 9, max: 10, label: "Writing Quality" },
+        },
+        keyInsights: [
+          { positive: true, text: "Exceptional metric-driven achievements ($M ARR, retention)" },
+          { positive: true, text: "High cross-functional leadership clarity" },
+          { positive: false, text: "Consider adding explicit AI/LLM discovery terms" }
+        ],
+        missingKeywords: ["Generative AI Tools", "SQL Data Extraction", "PLG (Product-Led Growth)"],
+        foundKeywords: ["Product Strategy", "Roadmapping", "A/B Testing", "Mixpanel", "Jira", "User Research"],
+        rewrites: [
+          {
+            original: "Led sprint meetings and prioritized features for mobile app.",
+            improved: "Spearheaded 14-engineer agile sprint cadences, shipping 6 core mobile features that accelerated 30-day user retention from 42% to 64%.",
+            impact: "+18% clarity score"
+          }
+        ]
+      }
+    ];
+
+    function App() {
+      const [activeSampleIdx, setActiveSampleIdx] = useState(0);
+      const [sample, setSample] = useState(SAMPLES[0]);
+      const [reportOpen, setReportOpen] = useState(false);
+      const [uploadOpen, setUploadOpen] = useState(false);
+      const [demoOpen, setDemoOpen] = useState(false);
+      const [reportTab, setReportTab] = useState('overview');
+      const [faqOpen, setFaqOpen] = useState(0);
+
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      }, [sample, reportOpen, uploadOpen, demoOpen, reportTab, faqOpen]);
+
+      const radius = 54;
+      const circumference = 2 * Math.PI * radius;
+      const strokeDashoffset = circumference - (sample.overallScore / 100) * circumference;
+
+      const switchSample = () => {
+        const next = (activeSampleIdx + 1) % SAMPLES.length;
+        setActiveSampleIdx(next);
+        setSample(SAMPLES[next]);
+      };
+
+      return (
+        <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans">
+          
+          {/* 1. Header / Navbar */}
+          <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 py-3.5 flex items-center justify-between">
+              <a href="#home" className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/30">
+                  <i data-lucide="file-text" className="w-5 h-5"></i>
+                </div>
+                <span className="font-bold text-xl tracking-tight text-slate-900">
+                  Resume<span className="text-blue-600">Lens</span>
+                </span>
+              </a>
+
+              <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+                <a href="#home" className="hover:text-slate-900 transition-colors">Home</a>
+                <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
+                <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How It Works</a>
+                <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</a>
+                <a href="#faqs" className="hover:text-slate-900 transition-colors">FAQs</a>
+              </nav>
+
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => alert("Welcome! Sign in with your email or Google account.")}
+                  className="hidden sm:block text-sm font-medium text-slate-700 hover:text-slate-900 px-3 py-2 rounded-lg"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => setUploadOpen(true)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-4.5 py-2.5 rounded-lg shadow-sm shadow-blue-600/20"
+                >
+                  Get Started Free
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* 2. Hero Section */}
+          <section id="home" className="relative pt-8 pb-16 lg:pt-14 lg:pb-24 overflow-hidden">
+            <div className="absolute inset-0 bg-vertical-grid pointer-events-none opacity-60"></div>
+            
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+                
+                {/* Hero Left Content */}
+                <div className="lg:col-span-6 space-y-6 sm:space-y-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold">
+                    <i data-lucide="check" className="w-3.5 h-3.5 text-blue-600 stroke-[2.5]"></i>
+                    <span>Evidence-Based Resume Analysis</span>
+                  </div>
+
+                  <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-black text-slate-900 tracking-tight leading-[1.12]">
+                    Make your resume <span className="text-blue-600 inline-block font-black">stronger</span> before you apply.
+                  </h1>
+
+                  <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
+                    Upload your resume and get a clear analysis of its structure, skills, experience, ATS compatibility, and job relevance — with practical suggestions you can actually use.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-4 pt-1">
+                    <button
+                      onClick={() => setUploadOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base rounded-xl shadow-md shadow-blue-600/25 hover:shadow-lg transition-all"
+                    >
+                      <span>Analyze My Resume</span>
+                      <i data-lucide="arrow-right" className="w-4 h-4 stroke-[2.5]"></i>
+                    </button>
+
+                    <button
+                      onClick={() => setDemoOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm sm:text-base rounded-xl shadow-xs"
+                    >
+                      <i data-lucide="play" className="w-4 h-4 fill-slate-700"></i>
+                      <span>Watch Demo</span>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-y-2 gap-x-5 pt-2 text-xs sm:text-sm text-slate-600 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <i data-lucide="check-circle-2" className="w-4 h-4 text-emerald-600"></i>
+                      <span>No signup required</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <i data-lucide="check-circle-2" className="w-4 h-4 text-emerald-600"></i>
+                      <span>Secure & private</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <i data-lucide="check-circle-2" className="w-4 h-4 text-emerald-600"></i>
+                      <span>PDF & DOCX supported</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hero Right UI Card */}
+                <div className="lg:col-span-6 flex justify-center lg:justify-end">
+                  <div className="w-full max-w-[540px] bg-white rounded-2xl border border-slate-200/90 shadow-2xl shadow-slate-900/10 overflow-hidden">
+                    
+                    {/* Window Title Bar */}
+                    <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50/80 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>
+                        </div>
+                        <span className="ml-2 text-xs font-semibold text-slate-700">
+                          Resume Analysis
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={switchSample}
+                          className="text-[11px] font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2 py-0.5 rounded hover:bg-slate-200/50"
+                        >
+                          <i data-lucide="refresh-cw" className="w-3 h-3"></i>
+                          <span>Switch Demo</span>
+                        </button>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          Analyzed
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-6 sm:p-7 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                          <i data-lucide="file-text" className="w-5 h-5 stroke-[2]"></i>
+                        </div>
+                        <div>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                            {sample.fileName}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {sample.pageCount} pages • {sample.analyzedAt}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Donut Score + Bars */}
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center pt-1">
+                        <div className="sm:col-span-5 flex flex-col items-center justify-center">
+                          <div className="relative w-36 h-36 flex items-center justify-center">
+                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 130 130">
+                              <circle cx="65" cy="65" r={radius} stroke="#E2E8F0" strokeWidth="10" fill="transparent" />
+                              <circle
+                                cx="65" cy="65" r={radius}
+                                stroke="#2550EB" strokeWidth="10" fill="transparent"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={strokeDashoffset}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                              <div className="flex items-baseline justify-center">
+                                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                                  {sample.overallScore}
+                                </span>
+                                <span className="text-xs font-semibold text-slate-500 ml-0.5">/100</span>
+                              </div>
+                              <span className="mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                {sample.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-7 space-y-2.5">
+                          {Object.entries(sample.scores).map(([k, item]) => (
+                            <div key={k} className="space-y-1">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-medium text-slate-700">{item.label}</span>
+                                <span className="font-semibold text-slate-900">{item.current}/{item.max}</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-700 rounded-full"
+                                  style={{ width: `${(item.current / item.max) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Key Insights */}
+                      <div className="pt-2 border-t border-slate-100 space-y-3">
+                        <p className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+                          Key Insights
+                        </p>
+                        <div className="space-y-2">
+                          {sample.keyInsights.map((insight, idx) => (
+                            <div key={idx} className="flex items-start gap-2 text-xs">
+                              {insight.positive ? (
+                                <i data-lucide="check-circle-2" className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                              ) : (
+                                <i data-lucide="alert-triangle" className="w-4 h-4 text-amber-500 shrink-0 mt-0.5"></i>
+                              )}
+                              <span className="text-slate-700 font-medium leading-relaxed">{insight.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* View Report CTA */}
+                      <button
+                        onClick={() => setReportOpen(true)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 hover:text-blue-600 transition-all shadow-sm group"
+                      >
+                        <span>View Full Report</span>
+                        <i data-lucide="arrow-right" className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Feature Strip Ticker */}
+          <section className="border-y border-slate-100 bg-slate-50/70 py-4.5">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                {[
+                  'Resume Analysis',
+                  'ATS Compatibility',
+                  'Job Description Matching',
+                  'Evidence-Based Score',
+                  'Actionable Suggestions'
+                ].map((pill, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
+                    <i data-lucide="check-circle-2" className="w-4 h-4 text-blue-600 shrink-0"></i>
+                    <span>{pill}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* 4. Problem / Value Proposition Section */}
+          <section id="features" className="py-20 lg:py-28 bg-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-3xl mx-auto space-y-3.5 mb-14 sm:mb-16">
+                <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold text-slate-900 tracking-tight leading-tight">
+                  A good resume isn't just about looking good.
+                </h2>
+                <p className="text-sm sm:text-base text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                  Small issues in structure, wording, skills, and relevance can make a strong resume less effective.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  {
+                    num: '01',
+                    icon: 'search',
+                    title: 'Unclear Strengths',
+                    desc: 'You may have valuable experience but struggle to communicate it effectively.'
+                  },
+                  {
+                    num: '02',
+                    icon: 'file-text',
+                    title: 'Generic Resumes',
+                    desc: "The same resume doesn't work equally well for every job."
+                  },
+                  {
+                    num: '03',
+                    icon: 'code-2',
+                    title: 'Missing Keywords',
+                    desc: 'Important skills from a target job may be missing from your resume.'
+                  },
+                  {
+                    num: '04',
+                    icon: 'gauge',
+                    title: 'No Objective Feedback',
+                    desc: 'It is difficult to know exactly what needs improvement before applying.'
+                  }
+                ].map((card) => (
+                  <div
+                    key={card.num}
+                    className="group relative bg-white rounded-2xl border border-slate-200/90 p-7 shadow-xs hover:shadow-xl hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="w-11 h-11 rounded-xl bg-blue-50 group-hover:bg-blue-600 text-blue-600 group-hover:text-white flex items-center justify-center transition-colors">
+                          <i data-lucide={card.icon} className="w-5 h-5 stroke-[2]"></i>
+                        </div>
+                        <span className="text-sm font-bold text-slate-400">{card.num}</span>
+                      </div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-2.5 group-hover:text-blue-600 transition-colors">
+                        {card.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                        {card.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* 5. How It Works Section */}
+          <section id="how-it-works" className="py-20 lg:py-28 bg-slate-50/60 border-t border-slate-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-3xl mx-auto space-y-3 mb-16">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                  <span>Simple 3-Step Process</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                  How ResumeLens Optimizes Your Application
+                </h2>
+                <p className="text-sm sm:text-base text-slate-500">
+                  Backed by recruiter research and parsing data from top applicant tracking systems.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  {
+                    step: 'Step 1',
+                    icon: 'upload-cloud',
+                    title: 'Upload Your Resume',
+                    desc: 'Drag and drop your PDF or DOCX resume. We maintain complete privacy with client-side sandbox processing.'
+                  },
+                  {
+                    step: 'Step 2',
+                    icon: 'cpu',
+                    title: 'Deep Multi-Factor Scan',
+                    desc: 'Our engine evaluates your ATS parse rate, keyword relevance, quantified achievements, and recruiter readability.'
+                  },
+                  {
+                    step: 'Step 3',
+                    icon: 'sparkles',
+                    title: 'Actionable Suggestions',
+                    desc: 'Get exact line-by-line rewrites, missing skills from target job descriptions, and instant score improvement.'
+                  }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl p-8 border border-slate-200/90 shadow-sm hover:shadow-lg transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-6 shadow-md shadow-blue-500/20">
+                      <i data-lucide={item.icon} className="w-6 h-6 stroke-[2]"></i>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-2">{item.step}</span>
+                    <h3 className="text-lg font-bold text-slate-900 mb-3">{item.title}</h3>
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* 6. Pricing Section */}
+          <section id="pricing" className="py-20 lg:py-28 bg-white border-t border-slate-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                  <span>Transparent Pricing</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                  Invest in Your Next Career Move
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm flex flex-col justify-between">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">Free Tier</h3>
+                      <p className="text-xs text-slate-500 mt-1">Perfect for a quick resume checkup</p>
+                      <div className="mt-4 flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold text-slate-900">$0</span>
+                        <span className="text-xs text-slate-500">/ forever</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3 pt-4 border-t border-slate-100 text-xs sm:text-sm text-slate-600">
+                      <div>✓ Complete Overall Evidence Score (0-100)</div>
+                      <div>✓ Basic ATS Compatibility Check</div>
+                      <div>✓ Top 4 Key Insights & Red Flags</div>
+                      <div>✓ PDF & DOCX Support</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setUploadOpen(true)} className="mt-8 w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs sm:text-sm rounded-xl">
+                    Analyze Free
+                  </button>
+                </div>
+
+                <div className="relative bg-white rounded-2xl border-2 border-blue-600 p-8 shadow-xl shadow-blue-500/10 flex flex-col justify-between">
+                  <div className="absolute -top-3.5 right-6 px-3 py-1 bg-blue-600 text-white text-[11px] font-extrabold uppercase tracking-wider rounded-full">
+                    Most Popular
+                  </div>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">Pro Job Seeker</h3>
+                      <p className="text-xs text-slate-500 mt-1">Unlimited tailored scans and AI rewrites</p>
+                      <div className="mt-4 flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold text-slate-900">$19</span>
+                        <span className="text-xs text-slate-500">/ month</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3 pt-4 border-t border-slate-100 text-xs sm:text-sm text-slate-700 font-medium">
+                      <div>✓ Unlimited Resume & Cover Letter Scans</div>
+                      <div>✓ Job Description Tailoring & Match %</div>
+                      <div>✓ AI Metric-Driven Bullet Point Rewrites</div>
+                      <div>✓ Detailed Keyword Gap Finder by Industry</div>
+                    </div>
+                  </div>
+                  <button onClick={() => setUploadOpen(true)} className="mt-8 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-md">
+                    Start 7-Day Free Trial
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 7. FAQs */}
+          <section id="faqs" className="py-20 bg-slate-50/50 border-t border-slate-100">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <h2 className="text-3xl font-extrabold text-slate-900 text-center mb-12">
+                Frequently Asked Questions
+              </h2>
+              <div className="space-y-4">
+                {[
+                  {
+                    q: 'How does ResumeLens calculate the evidence-based score?',
+                    a: 'Our scoring engine evaluates your resume across 6 critical dimensions: ATS parser readability, technical & hard skills presence, quantifiable impact in experience bullets, target job relevance, education structure, and grammatical clarity.'
+                  },
+                  {
+                    q: 'Will my resume data remain secure and confidential?',
+                    a: 'Yes, 100%. We do not sell your personal information or store your resume beyond your active session.'
+                  },
+                  {
+                    q: 'What is ATS compatibility?',
+                    a: 'Applicant Tracking Systems (ATS) are automated screening tools used by over 90% of Fortune 500 companies to filter resumes before recruiters review them.'
+                  }
+                ].map((faq, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl border border-slate-200/90 p-5">
+                    <button
+                      onClick={() => setFaqOpen(faqOpen === idx ? -1 : idx)}
+                      className="w-full flex justify-between items-center text-left font-bold text-slate-900 text-sm sm:text-base"
+                    >
+                      <span>{faq.q}</span>
+                      <i data-lucide="chevron-down" className={`w-4 h-4 transition-transform ${faqOpen === idx ? 'transform rotate-180 text-blue-600' : ''}`}></i>
+                    </button>
+                    {faqOpen === idx && (
+                      <p className="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-50 pt-3">
+                        {faq.a}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* 8. Footer */}
+          <footer className="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                  RL
+                </div>
+                <span className="font-bold text-white">ResumeLens</span>
+                <span>— Evidence-Based Resume Analysis</span>
+              </div>
+              <p>© {new Date().getFullYear()} ResumeLens Inc. All rights reserved.</p>
+            </div>
+          </footer>
+
+          {/* Full Report Modal */}
+          {reportOpen && (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+              <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                      <i data-lucide="file-text" className="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">{sample.fileName}</h3>
+                      <p className="text-xs text-slate-500">{sample.candidateName} • {sample.role}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setReportOpen(false)} className="p-2 text-slate-400 hover:text-slate-700 rounded-lg">
+                    <i data-lucide="x" className="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/40">
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    <div className="md:col-span-4 flex flex-col items-center justify-center">
+                      <span className="text-4xl font-extrabold text-slate-900">{sample.overallScore}/100</span>
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full mt-1">{sample.status}</span>
+                      <p className="text-xs text-slate-500 mt-1">Evidence Score</p>
+                    </div>
+                    <div className="md:col-span-8 space-y-2">
+                      {Object.entries(sample.scores).map(([k, item]) => (
+                        <div key={k} className="text-xs">
+                          <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                            <span>{item.label}</span>
+                            <span>{item.current}/{item.max}</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-600" style={{ width: `${(item.current / item.max) * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-900">Missing High-Impact Keywords</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {sample.missingKeywords.map((kw, i) => (
+                        <span key={i} className="px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-800">
+                          ⚠️ {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-3">
+                    <h4 className="text-sm font-bold text-slate-900">AI Bullet Point Optimization</h4>
+                    {sample.rewrites.map((r, i) => (
+                      <div key={i} className="space-y-1.5 border-b border-slate-100 pb-3 last:border-0">
+                        <p className="text-xs text-slate-400 line-through">"{r.original}"</p>
+                        <p className="text-xs sm:text-sm font-semibold text-slate-900 text-blue-900">"{r.improved}"</p>
+                        <span className="inline-block text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{r.impact}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="px-6 py-4 bg-white border-t border-slate-200 flex justify-end gap-3">
+                  <button onClick={() => setReportOpen(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">
+                    Close
+                  </button>
+                  <button onClick={() => alert("Copied recommendations to clipboard!")} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl">
+                    Copy Fixes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Modal */}
+          {uploadOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-slate-200 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-slate-900">Upload Resume</h3>
+                  <button onClick={() => setUploadOpen(false)} className="p-1 text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <div
+                  onClick={() => {
+                    alert("Scanning sample resume...");
+                    setUploadOpen(false);
+                    setReportOpen(true);
+                  }}
+                  className="border-2 border-dashed border-blue-300 hover:border-blue-600 rounded-xl p-8 text-center bg-blue-50/40 cursor-pointer space-y-2"
+                >
+                  <i data-lucide="upload-cloud" className="w-8 h-8 text-blue-600 mx-auto"></i>
+                  <p className="text-xs font-bold text-slate-800">Click to Select or Drop Resume File</p>
+                  <p className="text-[11px] text-slate-500">PDF, DOCX up to 10MB</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Demo Modal */}
+          {demoOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl p-6 border border-slate-200 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-slate-900">ResumeLens Walkthrough</h3>
+                  <button onClick={() => setDemoOpen(false)} className="p-1 text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <div className="aspect-video bg-slate-900 rounded-xl flex items-center justify-center text-white text-center p-4">
+                  <div>
+                    <i data-lucide="play" className="w-10 h-10 text-blue-400 mx-auto mb-2"></i>
+                    <p className="font-bold text-sm">Interactive Demo Preview</p>
+                    <p className="text-xs text-slate-400">Showing automated ATS check and keyword gap extraction</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
