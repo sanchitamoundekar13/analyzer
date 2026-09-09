@@ -53,29 +53,60 @@
 
 ---
 
-## System Architecture & Tech Stack
+##System Architecture & Tech Stack
 
-
-                    ResumeLens
-                        │
-          ┌─────────────┴─────────────┐
-          │                           │
-      Frontend                    Backend API
-          │                           │
- React + TypeScript             Python + FastAPI
- Vite                           │
- Tailwind                       ├── Resume Parser
- shadcn/ui                      ├── NLP Engine
- Framer Motion                  ├── ML Engine
- Recharts                       ├── Scoring Engine
- React Query                    └── LLM Service
-          │                           │
-          └─────────────┬─────────────┘
-                        │
-                PostgreSQL + pgvector
-                        │
-                Redis + Object Storage
-
+                        RESUMELENS
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+         FRONTEND                       BACKEND API
+              │                             │
+    React + TypeScript                 FastAPI + Python
+    Vite                               │
+    Tailwind CSS                       ├── Authentication
+    shadcn/ui                          ├── Resume Upload
+    Framer Motion                      ├── Resume Parser
+    Recharts                           │
+     React Query                        ├── NLP ENGINE
+              │                         │    ├── Section Detection
+              │                         │    ├── Skill Extraction
+              │                         │    ├── Entity Extraction
+              │                         │    └── Writing Analysis
+              │                         │
+              │                         ├── ML ENGINE
+              │                         │    ├── Skill Matching
+              │                         │    ├── Semantic Similarity
+              │                         │    └── Job Match Prediction
+              │                         │
+              │                         ├── ATS ENGINE
+              │                         │    ├── Format Checks
+              │                         │    ├── Keyword Analysis
+              │                         │    └── ATS Compatibility
+              │                         │
+              │                         ├── SCORING ENGINE
+              │                         │    ├── Evidence Collection
+              │                         │    ├── Weighted Scoring
+              │                         │    └── Point Deductions
+              │                         │
+              │                         └── LLM SERVICE
+              │                              ├── Explanations
+              │                              ├── Bullet Rewriting
+              │                              ├── Recommendations
+              │                              └── Resume Improvement
+              │
+              └──────────────┬──────────────┘
+                             │
+                  ┌──────────┴───────────┐
+                  │                      │
+            PostgreSQL                Redis
+            + pgvector                │
+                  │              Cache / Queue
+                  │              Rate Limiting
+                  │
+                  └──────────┬───────────┘
+                             │
+                       Object Storage
+                     PDF / DOCX / Reports
 
 ### 🔹 Layer Breakdown
 
