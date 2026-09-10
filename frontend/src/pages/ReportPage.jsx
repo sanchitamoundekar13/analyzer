@@ -33,12 +33,15 @@ export function ReportPage({ reportId, onNavigate }) {
 
   const report = reports.find(r => r.id === reportId) || reports[0];
 
-  if (!report) {
+  if (!report || report.status === 'rejected') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-800">Report Not Found</h2>
-        <Button variant="primary" className="mt-4" onClick={() => onNavigate('/analyze')}>
-          Scan a Resume
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center space-y-4">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">No Valid Resume Analysis Found</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
+          ResumeLens analyzes resumes and CVs only. Please upload a verified resume to view an ATS score report.
+        </p>
+        <Button variant="glow" onClick={() => onNavigate('/analyze')}>
+          Upload Resume
         </Button>
       </div>
     );

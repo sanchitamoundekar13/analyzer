@@ -1,12 +1,238 @@
 /**
- * Client-Side Deterministic 7-Dimension 100-Point Scoring Engine.
- * Provides complete mathematical and feature parity with the Python FastAPI scoring backend.
+ * Client-Side Deterministic 7-Dimension 100-Point Scoring Engine & Resume Verification Pipeline.
+ * Provides complete mathematical and feature parity with the Python FastAPI backend.
  */
 
 import { SKILL_CATEGORIES } from './skillTaxonomy.js';
 
-export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescription = '') {
+export const DOC_TYPE_NAMES = {
+  resume: "Resume / CV",
+  cover_letter: "Cover Letter",
+  academic_assignment: "Academic Assignment",
+  research_paper: "Research Paper",
+  marksheet: "Academic Marksheet / Transcript",
+  certificate: "Certificate",
+  invoice: "Invoice / Financial Bill",
+  other: "General Document / Unknown"
+};
+
+/**
+ * Validates and classifies a document on the client-side.
+ */
+export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf') {
+  const text = (resumeText || '').trim();
+  const textLower = text.toLowerCase();
+  const fnameLower = (filename || '').toLowerCase();
+
+  if (text.length < 30) {
+    return {
+      status: 'rejected',
+      document_type: 'other',
+      document_type_label: 'Empty / Unreadable Document',
+      resume_confidence: 0,
+      is_resume: false,
+      reason: 'unreadable_or_empty',
+      message: 'Unable to read this document. Please upload a clear PDF or DOCX version of your resume.',
+      detected_sections: [],
+      missing_sections: ['Contact Information', 'Education', 'Skills', 'Experience'],
+      detected_elements: { candidate_name: false, contact_info: false, education: false, skills: false, experience_or_projects: false }
+    };
+  }
+
+  // Non-resume lexical patterns
+  const nonResumePatterns = {
+    academic_assignment: [
+      /\b(?:assignment\s+(?:no\.?|number|\d+)|homework|problem\s+set|lab\s+report|coursework|tutorial\s+sheet)\b/i,
+      /\b(?:submitted\s+(?:by|to)|roll\s+(?:no|number)|reg(?:istration)?\s+no|student\s+id)\b/i,
+      /\b(?:question\s+\d+|q\.\s*\d+|exercise\s+\d+|solution\s+to\s+problem)\b/i
+    ],
+    research_paper: [
+      /\b(?:abstract\b[\s\S]{10,200}?\b(?:introduction|keywords|index terms)\b)/i,
+      /\b(?:doi\s*:\s*10\.\d{4,9}\/|arxiv\s*:\s*\d{4}\.\d{4,5})\b/i,
+      /\b(?:ieee|acm|elsevier|springer|proceedings\s+of|journal\s+of)\b/i,
+      /\b(?:methodology|literature\s+review|concluding\s+remarks)\b/i
+    ],
+    marksheet: [
+      /\b(?:statement\s+of\s+marks|grade\s+card|academic\s+transcript|mark\s*sheet|official\s+transcript)\b/i,
+      /\b(?:sgpa|cgpa|gpa|credits\s+earned|total\s+credits|grade\s+points?|letter\s+grade)\b/i,
+      /\b(?:semester\s+[ivx\d]+|term\s+examination|examination\s+held\s+in)\b/i
+    ],
+    certificate: [
+      /\b(?:certificate\s+of\s+(?:completion|achievement|appreciation|participation|excellence|merit))\b/i,
+      /\b(?:this\s+is\s+to\s+certify\s+that|hereby\s+certifies\s+that|is\s+proudly\s+presented\s+to)\b/i,
+      /\b(?:has\s+successfully\s+completed|in\s+recognition\s+of)\b/i
+    ],
+    invoice: [
+      /\b(?:tax\s+invoice|commercial\s+invoice|bill\s+to|ship\s+to|invoice\s+(?:no|number|#))\b/i,
+      /\b(?:payment\s+due|due\s+date|subtotal|total\s+amount|amount\s+due|balance\s+due)\b/i,
+      /\b(?:gstin|vat\s+reg|tax\s+id|bank\s+account\s+no|swift\s+code)\b/i
+    ],
+    cover_letter: [
+      /\b(?:dear\s+(?:hiring\s+manager|recruiter|selection\s+committee|mr\.|ms\.|dr\.))\b/i,
+      /\b(?:i\s+am\s+writing\s+to\s+(?:apply|express\s+my\s+interest|submit\s+my\s+candidacy))\b/i,
+      /\b(?:sincerely|best\s+regards|respectfully|yours\s+truly)[\s\S]{1,50}$/i
+    ]
+  };
+
+  let detectedType = 'resume';
+  let nonResumeHitScore = 0;
+
+  for (const [type, patterns] of Object.entries(nonResumePatterns)) {
+    let hits = 0;
+    for (const pat of patterns) {
+      if (pat.test(text)) hits++;
+    }
+    if (fnameLower.includes(type.replace('_', ''))) hits += 2;
+    if (hits >= 2) {
+      detectedType = type;
+      nonResumeHitScore = hits * 25;
+      break;
+    }
+  }
+
+  // Detect resume signals
+  const emailMatch = text.match(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/);
+  const phoneMatch = text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+  const linkedinMatch = text.match(/linkedin\.com/i);
+  const githubMatch = text.match(/github\.com/i);
+
+  const hasSummary = /\b(?:professional\s+summary|objective|profile|career\s+summary)\b/i.test(text);
+  const hasExp = /\b(?:work\s+experience|professional\s+experience|employment\s+history|experience)\b/i.test(text);
+  const hasSkills = /\b(?:technical\s+skills|core\s+skills|skills|technologies|competencies)\b/i.test(text);
+  const hasEdu = /\b(?:education|academic\s+background|degrees?|bachelor|master|b\.tech|b\.s\.|m\.s\.)\b/i.test(text);
+  const hasProjects = /\b(?:projects|portfolio|open\s+source)\b/i.test(text);
+  const hasCerts = /\b(?:certifications?|licenses)\b/i.test(text);
+
+  // Confidence Calculation
+  let confidence = 0;
+  if (emailMatch) confidence += 7;
+  if (phoneMatch) confidence += 5;
+  if (linkedinMatch || githubMatch) confidence += 3;
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const topHeader = lines.slice(0, 5).join(' ');
+  const hasValidName = lines[0] && lines[0].length < 35 && !/(assignment|chapter|invoice|certificate|abstract|paper)/i.test(lines[0]);
+  if (hasValidName) confidence += 10;
+
+  if (hasEdu) confidence += 15;
+  if (hasSkills) confidence += 15;
+  if (hasExp || hasProjects) confidence += 20;
+
+  let sectionCount = [hasSummary, hasExp, hasSkills, hasEdu, hasProjects, hasCerts].filter(Boolean).length;
+  confidence += Math.min(15, sectionCount * 3 + 3);
+  if (hasSummary) confidence += 5;
+  if (/\b(?:architected|engineered|developed|spearheaded|optimized|implemented|deployed|managed)\b/i.test(text)) confidence += 5;
+
+  if (detectedType !== 'resume') {
+    confidence = Math.max(5, confidence - 40 - nonResumeHitScore);
+  }
+
+  confidence = Math.min(100, Math.max(0, confidence));
+
+  const detectedSections = [];
+  if (hasSummary) detectedSections.push("Summary");
+  if (hasExp) detectedSections.push("Experience");
+  if (hasSkills) detectedSections.push("Skills");
+  if (hasEdu) detectedSections.push("Education");
+  if (hasProjects) detectedSections.push("Projects");
+  if (hasCerts) detectedSections.push("Certifications");
+
+  const allSections = ["Summary", "Experience", "Skills", "Education", "Projects", "Certifications"];
+  const missingSections = allSections.filter(s => !detectedSections.includes(s));
+
+  const detectedElements = {
+    candidate_name: Boolean(hasValidName),
+    contact_info: Boolean(emailMatch || phoneMatch),
+    education: Boolean(hasEdu),
+    skills: Boolean(hasSkills),
+    experience_or_projects: Boolean(hasExp || hasProjects)
+  };
+
+  const rejectionMessages = {
+    academic_assignment: "This document appears to be an Academic Assignment rather than a Resume or CV.",
+    research_paper: "This document appears to be a Research Paper rather than a Resume or CV.",
+    marksheet: "This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
+    certificate: "Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
+    invoice: "Invoices and financial bills cannot be analyzed as resumes. Please upload your Resume or CV.",
+    cover_letter: "This appears to be a Cover Letter. ResumeLens currently analyzes Resumes and CVs.",
+    other: "This document does not appear to be a Resume or CV."
+  };
+
+  if (detectedType !== 'resume' && confidence < 60) {
+    return {
+      status: 'rejected',
+      document_type: detectedType,
+      document_type_label: DOC_TYPE_NAMES[detectedType] || "Non-Resume Document",
+      resume_confidence: confidence,
+      is_resume: false,
+      reason: 'not_a_resume',
+      message: rejectionMessages[detectedType] || "This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.",
+      detected_sections: detectedSections,
+      missing_sections: missingSections,
+      detected_elements: detectedElements,
+      requires_confirmation: false
+    };
+  }
+
+  if (confidence < 60) {
+    return {
+      status: 'rejected',
+      document_type: 'other',
+      document_type_label: 'Non-Resume Document',
+      resume_confidence: confidence,
+      is_resume: false,
+      reason: 'insufficient_resume_structure',
+      message: "We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only.",
+      detected_sections: detectedSections,
+      missing_sections: missingSections,
+      detected_elements: detectedElements,
+      requires_confirmation: false
+    };
+  }
+
+  if (confidence < 85) {
+    return {
+      status: 'uncertain',
+      document_type: 'resume',
+      document_type_label: 'Resume / CV (Uncertain Structure)',
+      resume_confidence: confidence,
+      is_resume: true,
+      reason: 'uncertain_resume_structure',
+      message: "We found some resume-like information, but this document does not clearly appear to be a complete resume. Please make sure you uploaded your Resume or CV.",
+      detected_sections: detectedSections,
+      missing_sections: missingSections,
+      detected_elements: detectedElements,
+      requires_confirmation: true
+    };
+  }
+
+  return {
+    status: 'success',
+    document_type: 'resume',
+    document_type_label: 'Resume / CV',
+    resume_confidence: confidence,
+    is_resume: true,
+    reason: 'valid_resume',
+    message: "Resume detected successfully.",
+    detected_sections: detectedSections,
+    missing_sections: missingSections,
+    detected_elements: detectedElements,
+    requires_confirmation: false
+  };
+}
+
+export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescription = '', forceAnalysis = false) {
   const text = resumeText || '';
+  
+  // 1. Validation Gate
+  const validation = validateAndClassifyDocument(text, filename);
+  if (validation.status === 'rejected') {
+    return validation;
+  }
+  if (validation.status === 'uncertain' && !forceAnalysis) {
+    return validation;
+  }
+
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
   // 1. Detect contact info
@@ -76,44 +302,35 @@ export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescri
   const missingSkills = jdRequired.filter(s => !detectedSkills.includes(s));
 
   // 4. Calculate 7 Dimensions
-  // ATS Compatibility (20 pts)
   const hasEmail = Boolean(emailMatch);
   const hasPhone = Boolean(phoneMatch);
   const atsScore = (hasEmail && hasPhone ? 18 : 12) + (bullets.length >= 4 ? 2 : 0);
   const atsLost = 20 - atsScore;
 
-  // Job Match (20 pts)
   const jdPct = missingSkills.length <= 2 ? 85 : 70;
   const jobMatchScore = Math.round((jdPct / 100) * 20);
   const jdLost = 20 - jobMatchScore;
 
-  // Skills Coverage (15 pts)
   const skillsScore = Math.min(15, Math.max(6, Math.round((detectedSkills.length / 12) * 15)));
   const skillsLost = 15 - skillsScore;
 
-  // Experience Evidence (15 pts)
   const quantRatio = quantCount / Math.max(1, bullets.length);
   const expScore = Math.min(15, Math.max(6, Math.round(quantRatio * 15) + (bullets.length >= 4 ? 4 : 0)));
   const expLost = 15 - expScore;
 
-  // Resume Structure (10 pts)
   const structScore = 9;
   const structLost = 1;
 
-  // Writing Quality (10 pts)
   const writingScore = Math.min(10, Math.max(5, 10 - weakBullets.length * 2));
   const writingLost = 10 - writingScore;
 
-  // Education & Projects (10 pts)
   const eduScore = 8;
   const eduLost = 2;
 
-  // Total
   const totalScore = Math.min(100, Math.max(30, atsScore + jobMatchScore + skillsScore + expScore + structScore + writingScore + eduScore));
   const totalPointsLost = 100 - totalScore;
   const reachableTarget = Math.min(96, totalScore + Math.round(totalPointsLost * 0.75));
 
-  // Deductions
   const deductions = [];
   if (jdLost > 0) deductions.push({ dimension: "Job Match", points_lost: jdLost, reason: `Missing target role keywords: ${missingSkills.slice(0, 3).join(', ')}` });
   if (skillsLost > 0) deductions.push({ dimension: "Skills Coverage", points_lost: skillsLost, reason: `Only ${detectedSkills.length} core technical skills detected from role taxonomy` });
@@ -135,6 +352,10 @@ export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescri
 
   return {
     id: `scan-${Date.now().toString(36)}`,
+    status: "success",
+    document_type: validation.document_type,
+    document_type_label: validation.document_type_label,
+    resume_confidence: validation.resume_confidence,
     filename: filename,
     candidate_name: lines[0] && lines[0].length < 35 ? lines[0].replace(/[^a-zA-Z\s]/g, '') : "Candidate Name",
     analyzed_at: "Just now",
@@ -142,7 +363,7 @@ export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescri
     overall_score: totalScore,
     reachable_target: reachableTarget,
     potential_gain: reachableTarget - totalScore,
-    status: status,
+    quality_status: status,
     status_color: statusColor,
     total_points_lost: totalPointsLost,
     score_breakdown: {
