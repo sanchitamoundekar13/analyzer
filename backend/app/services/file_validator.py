@@ -52,8 +52,18 @@ def validate_uploaded_file(
             ext = candidate_ext
             break
 
+    # If filename has an explicit non-allowed extension (e.g., .zip, .exe, .png, .jpg), reject it
     if not ext:
-        # Check magic bytes for PDF/DOCX if extension is missing/misnamed
+        has_other_ext = any(fname.endswith(bad_ext) for bad_ext in [".zip", ".exe", ".rar", ".7z", ".tar", ".gz", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".csv", ".xlsx", ".json", ".xml", ".html", ".js", ".py"])
+        if has_other_ext:
+            return {
+                "is_valid": False,
+                "error_type": "unsupported_format",
+                "message": "Unsupported file format. ResumeLens supports PDF (.pdf) and Word (.docx, .doc) resumes.",
+                "detected_extension": fname.split(".")[-1] if "." in fname else "unknown",
+                "file_size_bytes": file_size
+            }
+        # Check magic bytes for PDF/DOCX if extension is missing/generic
         if file_bytes.startswith(b"%PDF-"):
             ext = ".pdf"
         elif file_bytes.startswith(b"PK\x03\x04"):

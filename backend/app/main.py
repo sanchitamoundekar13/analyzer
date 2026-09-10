@@ -4,6 +4,7 @@ Industrial-grade ATS Analyzer, 7-dimension scoring engine, and AI career optimiz
 """
 
 import os
+import logging
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,10 @@ from .scoring.scoring_engine import calculate_full_score
 from .llm.bullet_optimizer import generate_bullet_rewrites
 from .llm.evidence_vault import extract_evidence_vault
 from .llm.cover_letter_gen import generate_cover_letter
+
+# Configure safe, privacy-preserving structured logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("resumelens.pipeline")
 
 app = FastAPI(
     title="ResumeLens AI API",
@@ -61,35 +66,51 @@ async def validate_document_endpoint(
     filename = "document.pdf"
     if file:
         filename = file.filename or "document.pdf"
+        logger.info(f"Preflight validation received for upload: {filename}")
         file_bytes = await file.read()
         val_result = validate_uploaded_file(file_bytes, filename)
         if not val_result["is_valid"]:
+            logger.warning(f"Preflight format rejected: {val_result['error_type']}")
             return {
+                "success": False,
+                "is_resume": False,
+                "analysis_status": "rejected",
                 "status": "rejected",
                 "document_type": "invalid_file",
                 "document_type_label": "Invalid File",
                 "resume_confidence": 0,
+                "error_code": "INVALID_FILE_FORMAT",
                 "reason": val_result["error_type"],
                 "message": val_result["message"]
             }
 
     doc_payload = extract_document_payload(file_bytes=file_bytes, filename=filename, raw_text=raw_text)
     if not doc_payload["is_readable"]:
+        logger.warning("Preflight extraction unreadable")
         return {
+            "success": False,
+            "is_resume": False,
+            "analysis_status": "failed",
             "status": "rejected",
             "document_type": "unreadable",
             "document_type_label": "Unreadable Document",
             "resume_confidence": 0,
+            "error_code": "PROCESSING_ERROR",
             "reason": "unreadable_content",
             "message": doc_payload.get("error_message") or "Unable to read this document. Please upload a clear PDF or DOCX version of your resume."
         }
 
     validation = validate_and_score_resume(doc_payload["text"], filename=filename, force_analysis=False)
+    logger.info(f"Preflight validation completed: type={validation['document_type']}, conf={validation['resume_confidence']}%")
     return {
+        "success": validation["status"] == "success",
+        "is_resume": validation["is_resume"],
+        "analysis_status": validation["status"],
         "status": validation["status"],
         "document_type": validation["document_type"],
         "document_type_label": validation["document_type_label"],
         "resume_confidence": validation["resume_confidence"],
+        "error_code": "NOT_A_RESUME" if validation["status"] == "rejected" else None,
         "reason": validation["reason"],
         "message": validation["message"],
         "detected_sections": validation["detected_sections"],
@@ -120,18 +141,25 @@ async def analyze_resume(
 
     if file:
         filename = file.filename or "resume.pdf"
+        logger.info(f"Analyze request received for file: {filename}")
         file_bytes = await file.read()
         
         # 1. Step: File Validation
         file_val = validate_uploaded_file(file_bytes, filename)
         if not file_val["is_valid"]:
+            logger.warning(f"File validation rejected for {filename}: {file_val['error_type']}")
             return {
+                "success": False,
+                "is_resume": None,
+                "analysis_status": "failed",
                 "status": "rejected",
                 "document_type": "invalid_file",
                 "document_type_label": "Invalid File",
                 "resume_confidence": 0,
+                "error_code": "PROCESSING_ERROR",
                 "reason": file_val["error_type"],
                 "message": file_val["message"],
+                "details": "Uploaded file is unsupported, corrupted, or password protected.",
                 "detected_sections": [],
                 "missing_sections": ["Contact Information", "Education", "Skills", "Experience"],
                 "detected_elements": {
@@ -143,13 +171,19 @@ async def analyze_resume(
                 }
             }
     elif not raw_text:
+        logger.warning("Analyze request rejected: Empty input")
         return {
+            "success": False,
+            "is_resume": None,
+            "analysis_status": "failed",
             "status": "rejected",
             "document_type": "other",
             "document_type_label": "Empty Document",
             "resume_confidence": 0,
+            "error_code": "PROCESSING_ERROR",
             "reason": "empty_input",
             "message": "Please provide a resume file or raw text.",
+            "details": "No document content was uploaded.",
             "detected_sections": [],
             "missing_sections": ["Contact Information", "Education", "Skills", "Experience"],
             "detected_elements": {
@@ -166,13 +200,19 @@ async def analyze_resume(
     full_text = doc_payload.get("text", "").strip()
 
     if not doc_payload.get("is_readable") or len(full_text) < 30:
+        logger.warning(f"Extraction failed/unreadable: {filename}")
         return {
+            "success": False,
+            "is_resume": None,
+            "analysis_status": "failed",
             "status": "rejected",
             "document_type": "unreadable",
             "document_type_label": "Unreadable Document",
             "resume_confidence": 0,
+            "error_code": "PROCESSING_ERROR",
             "reason": "unreadable_content",
             "message": doc_payload.get("error_message") or "Unable to read this document. Please upload a clear PDF or DOCX version of your resume.",
+            "details": "Extracted text was insufficient or unreadable.",
             "detected_sections": [],
             "missing_sections": ["Contact Information", "Education", "Skills", "Experience"],
             "detected_elements": {
@@ -186,17 +226,24 @@ async def analyze_resume(
 
     # 3 & 4. Step: Document Classification & Resume Structure Confidence
     validation = validate_and_score_resume(full_text, filename=filename, force_analysis=bool(force_analysis))
+    logger.info(f"Resume validation gate: type={validation['document_type']}, conf={validation['resume_confidence']}%, status={validation['status']}")
 
     # 5. Step: Gate Decision
     if validation["status"] == "rejected":
         # STOP: Do NOT call ATS, Scoring, or LLM engines
+        logger.info(f"Pipeline HALTED at validation gate for non-resume: {validation['document_type']}")
         return {
+            "success": False,
+            "is_resume": False,
+            "analysis_status": "rejected",
             "status": "rejected",
             "document_type": validation["document_type"],
             "document_type_label": validation["document_type_label"],
             "resume_confidence": validation["resume_confidence"],
+            "error_code": "NOT_A_RESUME",
             "reason": validation["reason"],
             "message": validation["message"],
+            "details": "ResumeLens analyzes resumes and CVs only. No ATS score was generated for this file.",
             "detected_sections": validation["detected_sections"],
             "missing_sections": validation["missing_sections"],
             "detected_elements": validation["detected_elements"],
@@ -205,13 +252,19 @@ async def analyze_resume(
 
     if validation["status"] == "uncertain" and not force_analysis:
         # Require confirmation before executing ATS analysis
+        logger.info(f"Pipeline paused at uncertain gate for {filename}")
         return {
+            "success": False,
+            "is_resume": False,
+            "analysis_status": "uncertain",
             "status": "uncertain",
             "document_type": validation["document_type"],
             "document_type_label": validation["document_type_label"],
             "resume_confidence": validation["resume_confidence"],
+            "error_code": "UNCERTAIN_RESUME",
             "reason": validation["reason"],
             "message": validation["message"],
+            "details": "Document contains partial resume signals. User confirmation required.",
             "detected_sections": validation["detected_sections"],
             "missing_sections": validation["missing_sections"],
             "detected_elements": validation["detected_elements"],
@@ -220,6 +273,7 @@ async def analyze_resume(
         }
 
     # 6. Step: Genuine Resume Analysis (Executed ONLY for genuine resumes or user-confirmed uncertain resumes)
+    logger.info(f"Validation Gate Passed. Proceeding to ATS and Deterministic Scoring for {filename}")
     section_data = validation["extracted_sections"]
     entities = validation["extracted_entities"]
     parsed_doc = {
@@ -238,8 +292,12 @@ async def analyze_resume(
     bullet_rewrites = generate_bullet_rewrites(entities["weak_bullets_sample"], skills_data["matched_skills"])
     matched_roles = _calculate_career_roles(skills_data["matched_skills"])
 
+    logger.info(f"Analysis completed successfully for {filename}. Overall Score: {score_data['overall_score']}/100")
     return {
         "id": f"scan-{os.urandom(4).hex()}",
+        "success": True,
+        "is_resume": True,
+        "analysis_status": "completed",
         "status": "success",
         "document_type": validation["document_type"],
         "document_type_label": validation["document_type_label"],
