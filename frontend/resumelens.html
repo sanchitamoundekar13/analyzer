@@ -188,9 +188,224 @@
       return '';
     }
 
+    const DOC_TYPE_NAMES = {
+      resume: "Resume / CV",
+      cover_letter: "Cover Letter",
+      academic_assignment: "Academic Assignment",
+      research_paper: "Research Paper",
+      marksheet: "Academic Marksheet / Transcript",
+      certificate: "Certificate",
+      invoice: "Invoice / Financial Bill",
+      other: "General Document / Unknown"
+    };
+
+    function validateAndClassifyDocument(resumeText, filename = 'resume.pdf') {
+      const text = cleanClientText(resumeText || '');
+      const textLower = text.toLowerCase();
+      const fnameLower = (filename || '').toLowerCase();
+
+      if (text.length < 30) {
+        return {
+          status: 'rejected',
+          document_type: 'other',
+          document_type_label: 'Empty / Unreadable Document',
+          resume_confidence: 0,
+          is_resume: false,
+          reason: 'unreadable_or_empty',
+          message: 'Unable to read this document. Please upload a clear PDF or DOCX version of your resume.',
+          detected_sections: [],
+          missing_sections: ['Contact Information', 'Education', 'Skills', 'Experience'],
+          detected_elements: { candidate_name: false, contact_info: false, education: false, skills: false, experience_or_projects: false }
+        };
+      }
+
+      const nonResumePatterns = {
+        academic_assignment: [
+          /\b(?:assignment\s+(?:no\.?|number|\d+)|homework|problem\s+set|lab\s+report|coursework|tutorial\s+sheet)\b/i,
+          /\b(?:submitted\s+(?:by|to)|roll\s+(?:no|number)|reg(?:istration)?\s+no|student\s+id)\b/i,
+          /\b(?:question\s+\d+|q\.\s*\d+|exercise\s+\d+|solution\s+to\s+problem)\b/i
+        ],
+        research_paper: [
+          /\b(?:abstract\b[\s\S]{10,200}?\b(?:introduction|keywords|index terms)\b)/i,
+          /\b(?:doi\s*:\s*10\.\d{4,9}\/|arxiv\s*:\s*\d{4}\.\d{4,5})\b/i,
+          /\b(?:ieee|acm|elsevier|springer|proceedings\s+of|journal\s+of)\b/i,
+          /\b(?:methodology|literature\s+review|concluding\s+remarks)\b/i
+        ],
+        marksheet: [
+          /\b(?:statement\s+of\s+marks|grade\s+card|academic\s+transcript|mark\s*sheet|official\s+transcript)\b/i,
+          /\b(?:sgpa|cgpa|gpa|credits\s+earned|total\s+credits|grade\s+points?|letter\s+grade)\b/i,
+          /\b(?:semester\s+[ivx\d]+|term\s+examination|examination\s+held\s+in)\b/i
+        ],
+        certificate: [
+          /\b(?:certificate\s+of\s+(?:completion|achievement|appreciation|participation|excellence|merit))\b/i,
+          /\b(?:this\s+is\s+to\s+certify\s+that|hereby\s+certifies\s+that|is\s+proudly\s+presented\s+to)\b/i,
+          /\b(?:has\s+successfully\s+completed|in\s+recognition\s+of)\b/i
+        ],
+        invoice: [
+          /\b(?:tax\s+invoice|commercial\s+invoice|bill\s+to|ship\s+to|invoice\s+(?:no|number|#))\b/i,
+          /\b(?:payment\s+due|due\s+date|subtotal|total\s+amount|amount\s+due|balance\s+due)\b/i,
+          /\b(?:gstin|vat\s+reg|tax\s+id|bank\s+account\s+no|swift\s+code)\b/i
+        ],
+        cover_letter: [
+          /\b(?:dear\s+(?:hiring\s+manager|recruiter|selection\s+committee|mr\.|ms\.|dr\.))\b/i,
+          /\b(?:i\s+am\s+writing\s+to\s+(?:apply|express\s+my\s+interest|submit\s+my\s+candidacy))\b/i,
+          /\b(?:sincerely|best\s+regards|respectfully|yours\s+truly)[\s\S]{1,50}$/i
+        ]
+      };
+
+      let detectedType = 'resume';
+      let nonResumeHitScore = 0;
+
+      for (const [type, patterns] of Object.entries(nonResumePatterns)) {
+        let hits = 0;
+        for (const pat of patterns) {
+          if (pat.test(text)) hits++;
+        }
+        if (fnameLower.includes(type.replace('_', ''))) hits += 2;
+        if (hits >= 2) {
+          detectedType = type;
+          nonResumeHitScore = hits * 25;
+          break;
+        }
+      }
+
+      const emailMatch = text.match(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/);
+      const phoneMatch = text.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+      const linkedinMatch = text.match(/linkedin\.com/i);
+      const githubMatch = text.match(/github\.com/i);
+
+      const hasSummary = /\b(?:professional\s+summary|objective|profile|career\s+summary)\b/i.test(text);
+      const hasExp = /\b(?:work\s+experience|professional\s+experience|employment\s+history|experience)\b/i.test(text);
+      const hasSkills = /\b(?:technical\s+skills|core\s+skills|skills|technologies|competencies)\b/i.test(text);
+      const hasEdu = /\b(?:education|academic\s+background|degrees?|bachelor|master|b\.tech|b\.s\.|m\.s\.)\b/i.test(text);
+      const hasProjects = /\b(?:projects|portfolio|open\s+source)\b/i.test(text);
+      const hasCerts = /\b(?:certifications?|licenses)\b/i.test(text);
+
+      let confidence = 0;
+      if (emailMatch) confidence += 7;
+      if (phoneMatch) confidence += 5;
+      if (linkedinMatch || githubMatch) confidence += 3;
+
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const hasValidName = lines[0] && lines[0].length < 35 && !/(assignment|chapter|invoice|certificate|abstract|paper)/i.test(lines[0]);
+      if (hasValidName) confidence += 10;
+
+      if (hasEdu) confidence += 15;
+      if (hasSkills) confidence += 15;
+      if (hasExp || hasProjects) confidence += 20;
+
+      let sectionCount = [hasSummary, hasExp, hasSkills, hasEdu, hasProjects, hasCerts].filter(Boolean).length;
+      confidence += Math.min(15, sectionCount * 3 + 3);
+      if (hasSummary) confidence += 5;
+      if (/\b(?:architected|engineered|developed|spearheaded|optimized|implemented|deployed|managed)\b/i.test(text)) confidence += 5;
+
+      if (detectedType !== 'resume') {
+        confidence = Math.max(5, confidence - 40 - nonResumeHitScore);
+      }
+
+      confidence = Math.min(100, Math.max(0, confidence));
+
+      const detectedSections = [];
+      if (hasSummary) detectedSections.push("Summary");
+      if (hasExp) detectedSections.push("Experience");
+      if (hasSkills) detectedSections.push("Skills");
+      if (hasEdu) detectedSections.push("Education");
+      if (hasProjects) detectedSections.push("Projects");
+      if (hasCerts) detectedSections.push("Certifications");
+
+      const allSections = ["Summary", "Experience", "Skills", "Education", "Projects", "Certifications"];
+      const missingSections = allSections.filter(s => !detectedSections.includes(s));
+
+      const detectedElements = {
+        candidate_name: Boolean(hasValidName),
+        contact_info: Boolean(emailMatch || phoneMatch),
+        education: Boolean(hasEdu),
+        skills: Boolean(hasSkills),
+        experience_or_projects: Boolean(hasExp || hasProjects)
+      };
+
+      const rejectionMessages = {
+        academic_assignment: "This document appears to be an Academic Assignment rather than a Resume or CV.",
+        research_paper: "This document appears to be a Research Paper rather than a Resume or CV.",
+        marksheet: "This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
+        certificate: "Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
+        invoice: "Invoices and financial bills cannot be analyzed as resumes. Please upload your Resume or CV.",
+        cover_letter: "This appears to be a Cover Letter. ResumeLens currently analyzes Resumes and CVs.",
+        other: "This document does not appear to be a Resume or CV."
+      };
+
+      if (detectedType !== 'resume' && confidence < 60) {
+        return {
+          status: 'rejected',
+          document_type: detectedType,
+          document_type_label: DOC_TYPE_NAMES[detectedType] || "Non-Resume Document",
+          resume_confidence: confidence,
+          is_resume: false,
+          reason: 'not_a_resume',
+          message: rejectionMessages[detectedType] || "This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.",
+          detected_sections: detectedSections,
+          missing_sections: missingSections,
+          detected_elements: detectedElements
+        };
+      }
+
+      if (confidence < 60) {
+        return {
+          status: 'rejected',
+          document_type: 'other',
+          document_type_label: 'Non-Resume Document',
+          resume_confidence: confidence,
+          is_resume: false,
+          reason: 'insufficient_resume_structure',
+          message: "We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only.",
+          detected_sections: detectedSections,
+          missing_sections: missingSections,
+          detected_elements: detectedElements
+        };
+      }
+
+      if (confidence < 85) {
+        return {
+          status: 'uncertain',
+          document_type: 'resume',
+          document_type_label: 'Resume / CV (Uncertain Structure)',
+          resume_confidence: confidence,
+          is_resume: true,
+          reason: 'uncertain_resume_structure',
+          message: "We found some resume-like information, but this document does not clearly appear to be a complete resume. Please make sure you uploaded your Resume or CV.",
+          detected_sections: detectedSections,
+          missing_sections: missingSections,
+          detected_elements: detectedElements
+        };
+      }
+
+      return {
+        status: 'success',
+        document_type: 'resume',
+        document_type_label: 'Resume / CV',
+        resume_confidence: confidence,
+        is_resume: true,
+        reason: 'valid_resume',
+        message: "Resume detected successfully.",
+        detected_sections: detectedSections,
+        missing_sections: missingSections,
+        detected_elements: detectedElements
+      };
+    }
+
     // --- 7-DIMENSION DETERMINISTIC SCORING ENGINE ---
-    function analyzeResumeClient(rawText, filename = 'John_Doe_Resume.pdf', jd = '') {
+    function analyzeResumeClient(rawText, filename = 'John_Doe_Resume.pdf', jd = '', forceConfirm = false) {
       const sanitized = cleanClientText(rawText);
+      
+      // Step 1: Run Validation & Classification Gate
+      const validation = validateAndClassifyDocument(sanitized, filename);
+      if (validation.status === 'rejected') {
+        return validation;
+      }
+      if (validation.status === 'uncertain' && !forceConfirm) {
+        return validation;
+      }
+
       const lines = (sanitized || DEFAULT_SAMPLE_RESUME).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       const lower = (sanitized || DEFAULT_SAMPLE_RESUME).toLowerCase();
 
@@ -468,6 +683,8 @@ Requirements:
       const [isAnalyzing, setIsAnalyzing] = useState(false);
       const [analysisStage, setAnalysisStage] = useState('');
       const [scannerFilter, setScannerFilter] = useState('all'); // all, ats, bullet, skill, evidence
+      const [rejectionData, setRejectionData] = useState(null);
+      const [uncertainData, setUncertainData] = useState(null);
 
       // Resume Builder State
       const [builderState, setBuilderState] = useState({
@@ -512,19 +729,18 @@ Requirements:
       };
 
       // Run Analysis Process
-      const handleRunAnalysis = (text, jd, filename) => {
+      const handleRunAnalysis = (text, jd, filename, forceConfirm = false) => {
         setIsAnalyzing(true);
+        setRejectionData(null);
+        setUncertainData(null);
+
         const stages = [
-          'Validating document layout & MIME header...',
-          'Extracting text streams & font sizes...',
-          'Classifying section boundaries & ATS hierarchy...',
-          'Extracting candidate contacts, links & degrees...',
-          'Running canonical skill taxonomy normalization...',
-          'Calculating 4-bar JD semantic match & cosine similarity...',
-          'Auditing table, column, and text-box layout risks...',
-          'Running 7-dimension 100-pt deterministic scoring engine...',
-          'Extracting verified claims to Evidence Vault...',
-          'Generating non-hallucinating STAR bullet optimizations...'
+          'Checking file format & integrity...',
+          'Extracting readable text & OCR analysis...',
+          'Classifying document type & semantic signatures...',
+          'Auditing resume structure & confidence signals...',
+          'Validating experience timelines & candidate headers...',
+          'Resume verification complete...'
         ];
 
         let i = 0;
@@ -535,9 +751,19 @@ Requirements:
             setAnalysisStage(stages[i]);
           } else {
             clearInterval(interval);
-            const res = analyzeResumeClient(text || resumeText, filename || uploadedFileName, jd || jobText);
-            setReport(res);
             setIsAnalyzing(false);
+            const res = analyzeResumeClient(text || resumeText, filename || uploadedFileName, jd || jobText, forceConfirm);
+            
+            if (res.status === 'rejected') {
+              setRejectionData(res);
+              return;
+            }
+            if (res.status === 'uncertain' && !forceConfirm) {
+              setUncertainData(res);
+              return;
+            }
+
+            setReport(res);
             navigate('report');
           }
         }, 180);
@@ -548,6 +774,8 @@ Requirements:
         const file = e.target.files?.[0];
         if (!file) return;
         setUploadedFileName(file.name);
+        setRejectionData(null);
+        setUncertainData(null);
         
         const content = await extractTextFromFile(file);
         setResumeText(content);
@@ -796,9 +1024,197 @@ Requirements:
                     <div className="w-16 h-16 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-6"></div>
                     <h3 className="text-xl font-bold text-slate-900 mb-2">Analyzing Resume...</h3>
                     <p className="text-blue-600 font-mono text-xs bg-blue-50 py-2 px-4 rounded-lg border border-blue-200 inline-block mb-4">{analysisStage}</p>
-                    <p className="text-xs text-slate-400">Processing text streams, calculating 7-dimension weights, and checking layout integrity.</p>
+                    <p className="text-xs text-slate-400">Validating document type, resume structure, and calculating explainable evidence scores.</p>
+                  </div>
+                ) : rejectionData ? (
+                  /* 1. REJECTION SCREEN */
+                  <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-rose-200 shadow-xl overflow-hidden animate-fadeIn">
+                    <div className="bg-rose-50 border-b border-rose-100 p-6 sm:p-8">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                          <i data-lucide="x-circle" className="w-7 h-7"></i>
+                        </div>
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700">
+                              Not a Resume
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500">
+                              Resume Confidence: {rejectionData.resume_confidence}%
+                            </span>
+                          </div>
+                          <h2 className="text-2xl font-black text-slate-900">
+                            This doesn't appear to be a Resume
+                          </h2>
+                          <p className="text-sm text-slate-600">
+                            {rejectionData.message || "We could not find enough resume-specific information in this document."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-6 sm:p-8 space-y-6">
+                      {/* Detected Document Type Banner */}
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Detected Document Type</span>
+                          <div className="text-base font-bold text-slate-900 flex items-center gap-2 mt-0.5">
+                            <i data-lucide="file-text" className="w-4 h-4 text-rose-500"></i>
+                            <span>{rejectionData.document_type_label || rejectionData.document_type}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-slate-500 max-w-xs sm:text-right">
+                          ResumeLens analyzes resumes and CVs only. No ATS score was generated for this file.
+                        </div>
+                      </div>
+
+                      {/* Required Resume Information Checklist */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                          Resume Requirements Checklist
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            rejectionData.detected_elements?.candidate_name
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+                              : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                          }`}>
+                            <span className="font-semibold">Candidate Name & Header</span>
+                            <span>{rejectionData.detected_elements?.candidate_name ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            rejectionData.detected_elements?.contact_info
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+                              : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                          }`}>
+                            <span className="font-semibold">Contact Info (Email / Phone)</span>
+                            <span>{rejectionData.detected_elements?.contact_info ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            rejectionData.detected_elements?.education
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+                              : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                          }`}>
+                            <span className="font-semibold">Education & Degrees</span>
+                            <span>{rejectionData.detected_elements?.education ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            rejectionData.detected_elements?.skills
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+                              : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                          }`}>
+                            <span className="font-semibold">Skills & Competencies</span>
+                            <span>{rejectionData.detected_elements?.skills ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+
+                          <div className={`p-3 rounded-xl border sm:col-span-2 flex items-center justify-between ${
+                            rejectionData.detected_elements?.experience_or_projects
+                              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900'
+                              : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                          }`}>
+                            <span className="font-semibold">Work Experience / Projects / Timeline</span>
+                            <span>{rejectionData.detected_elements?.experience_or_projects ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Guidance & CTA */}
+                      <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="text-xs text-slate-500">
+                          Please upload a PDF or DOCX file containing your professional resume or CV.
+                        </p>
+                        <button
+                          onClick={() => { setRejectionData(null); setResumeText(''); }}
+                          className="px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2"
+                        >
+                          <i data-lucide="upload-cloud" className="w-4 h-4"></i>
+                          Upload Resume
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : uncertainData ? (
+                  /* 2. UNCERTAIN DOCUMENT SCREEN */
+                  <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-amber-200 shadow-xl overflow-hidden animate-fadeIn">
+                    <div className="bg-amber-50 border-b border-amber-100 p-6 sm:p-8">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                          <i data-lucide="alert-triangle" className="w-7 h-7"></i>
+                        </div>
+                        <div className="space-y-1.5 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-700">
+                              Uncertain Resume Structure
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500">
+                              Confidence: {uncertainData.resume_confidence}%
+                            </span>
+                          </div>
+                          <h2 className="text-2xl font-black text-slate-900">
+                            We are not completely sure that this is a resume
+                          </h2>
+                          <p className="text-sm text-slate-600">
+                            We found some resume-like information, but some important sections or timelines may be missing.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-6 sm:p-8 space-y-6">
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                          Detected Information Breakdown
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            uncertainData.detected_elements?.candidate_name ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-amber-50/50 border-amber-200 text-amber-900'
+                          }`}>
+                            <span className="font-semibold">Candidate Name</span>
+                            <span>{uncertainData.detected_elements?.candidate_name ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            uncertainData.detected_elements?.contact_info ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-amber-50/50 border-amber-200 text-amber-900'
+                          }`}>
+                            <span className="font-semibold">Contact Info</span>
+                            <span>{uncertainData.detected_elements?.contact_info ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            uncertainData.detected_elements?.education ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-amber-50/50 border-amber-200 text-amber-900'
+                          }`}>
+                            <span className="font-semibold">Education</span>
+                            <span>{uncertainData.detected_elements?.education ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+                          <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                            uncertainData.detected_elements?.skills ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-amber-50/50 border-amber-200 text-amber-900'
+                          }`}>
+                            <span className="font-semibold">Skills</span>
+                            <span>{uncertainData.detected_elements?.skills ? '✓ Found' : '✗ Missing'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <button
+                          onClick={() => { setUncertainData(null); setResumeText(''); }}
+                          className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50"
+                        >
+                          Upload Another File
+                        </button>
+                        <button
+                          onClick={() => handleRunAnalysis(resumeText, jobText, uploadedFileName, true)}
+                          className="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2"
+                        >
+                          <i data-lucide="check-circle-2" className="w-4 h-4"></i>
+                          Continue with Analysis
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
+                  /* 3. NORMAL UPLOAD BOX */
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Resume Upload Box */}
                     <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
