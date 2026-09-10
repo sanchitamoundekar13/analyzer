@@ -243,7 +243,7 @@ def run_all_tests():
     print("=" * 70)
 
     fixtures = [
-        ("1. Strong Resume", FIXTURE_STRONG_RESUME, "resume.pdf", True, "resume", 85),
+        ("1. Strong Resume", FIXTURE_STRONG_RESUME, "john_doe_resume.pdf", True, "resume", 85),
         ("2. Weak/Minimal Resume", FIXTURE_WEAK_RESUME, "resume_weak.pdf", True, "resume", 60),
         ("3. Student Resume", FIXTURE_STUDENT_RESUME, "student_cv.pdf", True, "resume", 75),
         ("4. One-Page Minimalist Resume", FIXTURE_ONE_PAGE_MINIMAL, "david_resume.docx", True, "resume", 70),
@@ -255,6 +255,9 @@ def run_all_tests():
         ("10. Cover Letter", FIXTURE_COVER_LETTER, "cover_letter_google.pdf", False, "cover_letter", 0),
         ("11. Random Lorem Ipsum", FIXTURE_LOREM_IPSUM, "document.txt", False, "other", 0),
         ("12. Empty Document", FIXTURE_EMPTY, "empty.pdf", False, "other", 0),
+        ("13. Resume named 'document.pdf'", FIXTURE_STRONG_RESUME, "document.pdf", True, "resume", 85),
+        ("14. Assignment named 'resume.pdf'", FIXTURE_ACADEMIC_ASSIGNMENT, "resume.pdf", False, "academic_assignment", 0),
+        ("15. Certificate named 'resume_cert.pdf'", FIXTURE_CERTIFICATE, "resume_cert.pdf", False, "certificate", 0),
     ]
 
     all_passed = True
@@ -284,9 +287,28 @@ def run_all_tests():
         if not passed:
             print(f"      [DEBUG] Expected Accepted={expect_accepted}, Got Status={val['status']}, Conf={conf}")
 
+    # File Format / Corrupt validation tests
+    print("\n" + "-" * 70)
+    print("RUNNING FILE VALIDATOR BINARY TESTS (EXE, ZIP, CORRUPT)")
+    print("-" * 70)
+    
+    from app.services.file_validator import validate_uploaded_file
+    
+    val_exe = validate_uploaded_file(b"MZ\x90\x00executable", "malware.exe")
+    assert not val_exe["is_valid"] and val_exe["error_type"] == "unsupported_format"
+    print("[PASS] | 16. Rejected .EXE binary executable file")
+
+    val_zip = validate_uploaded_file(b"PK\x03\x04archive", "archive.zip")
+    assert not val_zip["is_valid"] and val_zip["error_type"] == "unsupported_format"
+    print("[PASS] | 17. Rejected .ZIP archive file")
+
+    val_corrupt = validate_uploaded_file(b"Corrupted random non-pdf text bytes without magic header", "corrupt.pdf")
+    assert not val_corrupt["is_valid"] and val_corrupt["error_type"] == "corrupted"
+    print("[PASS] | 18. Rejected corrupted/invalid PDF without PDF magic bytes")
+
     print("\n" + "=" * 70)
     if all_passed:
-        print("ALL 12 VALIDATION TEST CASES PASSED WITH 100% ACCURACY!")
+        print("ALL 18 VALIDATION & INTEGRITY TEST CASES PASSED WITH 100% ACCURACY!")
     else:
         print("SOME TEST CASES FAILED - REVIEW LOGS ABOVE.")
     print("=" * 70)
