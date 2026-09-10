@@ -212,24 +212,24 @@ def validate_and_score_resume(
     # Decision Matrix
     # Non-resume type specific messages
     rejection_messages = {
-        "academic_assignment": "This document appears to be an Academic Assignment rather than a Resume or CV.",
-        "research_paper": "This document appears to be a Research Paper rather than a Resume or CV.",
-        "marksheet": "This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
-        "certificate": "Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
-        "invoice": "Invoices and financial bills cannot be analyzed as resumes. Please upload your Resume or CV.",
-        "cover_letter": "This appears to be a Cover Letter. ResumeLens currently analyzes Resumes and CVs.",
-        "other": "This document does not appear to be a Resume or CV."
+        "academic_assignment": "UPLOAD ONLY RESUME. This document appears to be an Academic Assignment rather than a Resume or CV.",
+        "research_paper": "UPLOAD ONLY RESUME. This document appears to be a Research Paper rather than a Resume or CV.",
+        "marksheet": "UPLOAD ONLY RESUME. This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
+        "certificate": "UPLOAD ONLY RESUME. Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
+        "invoice": "UPLOAD ONLY RESUME. Invoices and financial bills cannot be analyzed. Please upload your Resume or CV.",
+        "cover_letter": "UPLOAD ONLY RESUME. This appears to be a Cover Letter. ResumeLens analyzes Resumes and CVs only.",
+        "other": "UPLOAD ONLY RESUME. This document does not appear to be a Resume or CV."
     }
 
     if doc_type != DOC_TYPE_RESUME and not classification["is_resume"] and total_confidence < CONFIDENCE_THRESHOLD_UNCERTAIN:
         status = "rejected"
         reason = "not_a_resume"
-        message = rejection_messages.get(doc_type, "This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.")
+        message = rejection_messages.get(doc_type, "UPLOAD ONLY RESUME. This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.")
         requires_confirmation = False
     elif total_confidence < CONFIDENCE_THRESHOLD_UNCERTAIN:
         status = "rejected"
         reason = "insufficient_resume_structure"
-        message = "We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only."
+        message = "UPLOAD ONLY RESUME. We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only."
         requires_confirmation = False
     elif total_confidence < CONFIDENCE_THRESHOLD_ACCEPT:
         if force_analysis:

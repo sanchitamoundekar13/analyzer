@@ -182,32 +182,41 @@ export function AnalyzePage({ onNavigate }) {
 
         {/* 1. REJECTION SCREEN */}
         {pipelineState === 'rejected' && validationData && (
-          <Card className="shadow-xl border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-900 overflow-hidden animate-in fade-in duration-300">
-            <div className="bg-rose-500/10 border-b border-rose-200 dark:border-rose-900/40 p-6 sm:p-8">
+          <Card className="shadow-xl border-2 border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-900 overflow-hidden animate-in fade-in duration-300">
+            <div className="bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/60 p-6 sm:p-8">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
                   <XCircle className="w-7 h-7" />
                 </div>
-                <div className="space-y-1.5 flex-1">
+                <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                      Not a Resume
+                    <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                      UPLOAD ONLY RESUME
                     </span>
-                    <span className="text-xs font-semibold text-slate-500">
+                    <span className="text-xs font-semibold text-rose-700 bg-rose-100 dark:bg-rose-900 dark:text-rose-200 px-2.5 py-0.5 rounded-full">
                       Confidence: {validationData.resume_confidence}%
                     </span>
                   </div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                    This doesn't appear to be a Resume
+                  <h2 className="text-2xl sm:text-3xl font-black text-rose-950 dark:text-rose-100 tracking-tight">
+                    UPLOAD ONLY RESUME
                   </h2>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    {validationData.message || "We could not find enough resume-specific information in this document."}
+                  <p className="text-sm font-medium text-rose-800 dark:text-rose-300">
+                    {validationData.message || "UPLOAD ONLY RESUME. This document does not contain resume or CV content."}
                   </p>
                 </div>
               </div>
             </div>
 
             <CardContent className="p-6 sm:p-8 space-y-6">
+              {/* High-visibility Alert Notice */}
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <strong className="font-bold">Strict Validation Rule:</strong> ResumeLens accepts and analyzes <strong>Resumes and CVs only</strong>. Any other documents (such as academic assignments, research papers, marksheets, certificates, invoices, or random text files) are strictly blocked, and no ATS score will be generated.
+                </div>
+              </div>
+
               {/* Detected Type Banner */}
               <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -217,15 +226,15 @@ export function AnalyzePage({ onNavigate }) {
                     <span>{validationData.document_type_label || validationData.document_type}</span>
                   </div>
                 </div>
-                <div className="text-xs text-slate-500 max-w-xs sm:text-right">
-                  ResumeLens analyzes resumes and CVs only. No ATS score was generated for this file.
+                <div className="text-xs font-semibold text-rose-600 dark:text-rose-400 max-w-xs sm:text-right bg-rose-50 dark:bg-rose-950/50 p-2 rounded-lg border border-rose-200 dark:border-rose-900">
+                  Blocked: Non-resume document. Zero ATS score generated.
                 </div>
               </div>
 
               {/* Required Resume Information Checklist */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Resume Requirements Checklist
+                  Resume Elements Check
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className={`p-3 rounded-xl border flex items-center justify-between ${
@@ -277,8 +286,8 @@ export function AnalyzePage({ onNavigate }) {
 
               {/* Guidance & CTA */}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-slate-500">
-                  Please upload a PDF or DOCX file containing your professional resume or CV.
+                <p className="text-xs text-slate-500 font-medium">
+                  Please select and upload a valid resume (PDF or DOCX).
                 </p>
                 <Button
                   variant="glow"
@@ -287,7 +296,7 @@ export function AnalyzePage({ onNavigate }) {
                   onClick={handleResetUpload}
                   className="w-full sm:w-auto"
                 >
-                  Upload Resume
+                  Upload Only Resume
                 </Button>
               </div>
             </CardContent>

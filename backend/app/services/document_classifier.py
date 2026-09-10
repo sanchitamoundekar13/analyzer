@@ -246,7 +246,7 @@ def classify_document(text: str, filename: str = "") -> Dict[str, Any]:
         explanation = f"Classified as Resume/CV with {confidence_pct}% structural confidence based on standard sections and professional timeline."
     else:
         disp_name = DOCUMENT_DISPLAY_NAMES.get(primary_type, "Non-Resume Document")
-        explanation = f"Detected characteristics of {disp_name}. ResumeLens is specialized strictly for Resumes and CVs."
+        explanation = f"UPLOAD ONLY RESUME. Detected characteristics of {disp_name}. ResumeLens is specialized strictly for Resumes and CVs."
 
     return {
         "primary_type": primary_type,

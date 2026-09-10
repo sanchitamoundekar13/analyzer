@@ -233,13 +233,13 @@ export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf')
   };
 
   const rejectionMessages = {
-    academic_assignment: "This document appears to be an Academic Assignment rather than a Resume or CV.",
-    research_paper: "This document appears to be a Research Paper rather than a Resume or CV.",
-    marksheet: "This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
-    certificate: "Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
-    invoice: "Invoices and financial bills cannot be analyzed as resumes. Please upload your Resume or CV.",
-    cover_letter: "This appears to be a Cover Letter. ResumeLens currently analyzes Resumes and CVs.",
-    other: "This document does not appear to be a Resume or CV."
+    academic_assignment: "UPLOAD ONLY RESUME. This document appears to be an Academic Assignment rather than a Resume or CV.",
+    research_paper: "UPLOAD ONLY RESUME. This document appears to be a Research Paper rather than a Resume or CV.",
+    marksheet: "UPLOAD ONLY RESUME. This document appears to be an Academic Marksheet / Transcript rather than a Resume or CV.",
+    certificate: "UPLOAD ONLY RESUME. Certificates cannot be analyzed as resumes. Please upload your Resume or CV.",
+    invoice: "UPLOAD ONLY RESUME. Invoices and financial bills cannot be analyzed as resumes. Please upload your Resume or CV.",
+    cover_letter: "UPLOAD ONLY RESUME. This appears to be a Cover Letter. ResumeLens currently analyzes Resumes and CVs only.",
+    other: "UPLOAD ONLY RESUME. This document does not appear to be a Resume or CV."
   };
 
   if (detectedType !== 'resume' && confidence < 60) {
@@ -250,7 +250,7 @@ export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf')
       resume_confidence: confidence,
       is_resume: false,
       reason: 'not_a_resume',
-      message: rejectionMessages[detectedType] || "This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.",
+      message: rejectionMessages[detectedType] || "UPLOAD ONLY RESUME. This document does not appear to be a Resume or CV. Please upload a document containing your education, skills, projects, work experience, or contact details.",
       detected_sections: detectedSections,
       missing_sections: missingSections,
       detected_elements: detectedElements,
@@ -266,7 +266,7 @@ export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf')
       resume_confidence: confidence,
       is_resume: false,
       reason: 'insufficient_resume_structure',
-      message: "We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only.",
+      message: "UPLOAD ONLY RESUME. We could not find enough resume-specific information in this document. ResumeLens analyzes resumes and CVs only.",
       detected_sections: detectedSections,
       missing_sections: missingSections,
       detected_elements: detectedElements,

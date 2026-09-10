@@ -1028,32 +1028,41 @@ Requirements:
                   </div>
                 ) : rejectionData ? (
                   /* 1. REJECTION SCREEN */
-                  <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-rose-200 shadow-xl overflow-hidden animate-fadeIn">
-                    <div className="bg-rose-50 border-b border-rose-100 p-6 sm:p-8">
+                  <div className="max-w-3xl mx-auto bg-white rounded-2xl border-2 border-rose-300 shadow-xl overflow-hidden animate-fadeIn">
+                    <div className="bg-rose-50 border-b border-rose-200 p-6 sm:p-8">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
                           <i data-lucide="x-circle" className="w-7 h-7"></i>
                         </div>
-                        <div className="space-y-1.5 flex-1">
+                        <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-700">
-                              Not a Resume
+                            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                              UPLOAD ONLY RESUME
                             </span>
-                            <span className="text-xs font-semibold text-slate-500">
+                            <span className="text-xs font-semibold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full">
                               Resume Confidence: {rejectionData.resume_confidence}%
                             </span>
                           </div>
-                          <h2 className="text-2xl font-black text-slate-900">
-                            This doesn't appear to be a Resume
+                          <h2 className="text-2xl sm:text-3xl font-black text-rose-950 tracking-tight">
+                            UPLOAD ONLY RESUME
                           </h2>
-                          <p className="text-sm text-slate-600">
-                            {rejectionData.message || "We could not find enough resume-specific information in this document."}
+                          <p className="text-sm font-medium text-rose-800">
+                            {rejectionData.message || "UPLOAD ONLY RESUME. This document does not contain resume or CV content."}
                           </p>
                         </div>
                       </div>
                     </div>
 
                     <div className="p-6 sm:p-8 space-y-6">
+                      {/* High-visibility Warning Notice */}
+                      <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-start gap-3">
+                        <i data-lucide="alert-triangle" className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"></i>
+                        <div className="text-xs text-amber-900 leading-relaxed">
+                          <strong className="font-bold">Strict Validation Rule:</strong> ResumeLens accepts and analyzes <strong>Resumes and CVs only</strong>. Any other documents (such as academic assignments, research papers, marksheets, certificates, invoices, or random text files) are strictly blocked, and no ATS score will be generated.
+                        </div>
+                      </div>
+
                       {/* Detected Document Type Banner */}
                       <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
@@ -1063,15 +1072,15 @@ Requirements:
                             <span>{rejectionData.document_type_label || rejectionData.document_type}</span>
                           </div>
                         </div>
-                        <div className="text-xs text-slate-500 max-w-xs sm:text-right">
-                          ResumeLens analyzes resumes and CVs only. No ATS score was generated for this file.
+                        <div className="text-xs font-semibold text-rose-600 max-w-xs sm:text-right bg-rose-50 p-2 rounded-lg border border-rose-200">
+                          Blocked: Non-resume document. Zero ATS score generated.
                         </div>
                       </div>
 
                       {/* Required Resume Information Checklist */}
                       <div className="space-y-3">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                          Resume Requirements Checklist
+                          Resume Elements Check
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                           <div className={`p-3 rounded-xl border flex items-center justify-between ${
@@ -1123,15 +1132,15 @@ Requirements:
 
                       {/* Guidance & CTA */}
                       <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <p className="text-xs text-slate-500">
-                          Please upload a PDF or DOCX file containing your professional resume or CV.
+                        <p className="text-xs text-slate-500 font-medium">
+                          Please select and upload a valid resume (PDF or DOCX).
                         </p>
                         <button
                           onClick={() => { setRejectionData(null); setResumeText(''); }}
-                          className="px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm flex items-center gap-2"
+                          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md flex items-center gap-2 transition-all hover:shadow-lg"
                         >
                           <i data-lucide="upload-cloud" className="w-4 h-4"></i>
-                          Upload Resume
+                          Upload Only Resume
                         </button>
                       </div>
                     </div>
