@@ -21,8 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button.jsx';
 import { Card, CardContent } from '../components/ui/Card.jsx';
-import { Badge } from '../components/ui/Badge.jsx';
-import { runClientAnalysis } from '../services/scoringEngine.js';
+import { runClientAnalysis, extractTextFromClientFile, cleanClientText } from '../services/scoringEngine.js';
 import { analyzeResumeApi } from '../services/apiClient.js';
 import { useResumeStore } from '../store/useResumeStore.js';
 
@@ -116,12 +115,7 @@ export function AnalyzePage({ onNavigate }) {
       if (!report) {
         let text = cachedRawText;
         if (!text && file) {
-          text = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (event) => resolve(event.target.result || '');
-            reader.onerror = () => resolve('');
-            reader.readAsText(file);
-          });
+          text = await extractTextFromClientFile(file);
           setCachedRawText(text);
         }
 

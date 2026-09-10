@@ -17,10 +17,94 @@ export const DOC_TYPE_NAMES = {
 };
 
 /**
+ * Sanitizes text and strips control chars / binary artifacts.
+ */
+export function cleanClientText(rawText) {
+  if (!rawText) return '';
+  
+  // Check for raw binary file stream signatures (e.g. PDF bytes read as text)
+  if (rawText.startsWith('%PDF-') || rawText.startsWith('PK\x03\x04') || rawText.includes('\x00')) {
+    return '';
+  }
+
+  // Check non-printable ratio
+  const nonPrintableMatches = rawText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]/g);
+  if (nonPrintableMatches && nonPrintableMatches.length / rawText.length > 0.08) {
+    return '';
+  }
+
+  // Strip replacement & control characters
+  let text = rawText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]/g, ' ');
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  text = text.replace(/^[ \t]*[\*\-\•\⁃\◦\‣\►\>]+\s*/gm, '• ');
+  text = text.replace(/[ \t]+/g, ' ');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
+/**
+ * Robust Client-Side text extraction for PDF, DOCX, and TXT files.
+ */
+export async function extractTextFromClientFile(file) {
+  if (!file) return '';
+  const fname = (file.name || '').toLowerCase();
+
+  // 1. PDF File extraction via PDF.js if available
+  if (fname.endsWith('.pdf')) {
+    try {
+      if (window.pdfjsLib) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageStr = content.items.map(it => it.str).join(' ');
+          text += pageStr + '\n\n';
+        }
+        const cleaned = cleanClientText(text);
+        if (cleaned.length >= 30) return cleaned;
+      }
+    } catch (e) {
+      console.warn('PDF.js client extraction failed:', e);
+    }
+  }
+
+  // 2. DOCX File extraction via Mammoth if available
+  if (fname.endsWith('.docx')) {
+    try {
+      if (window.mammoth) {
+        const arrayBuffer = await file.arrayBuffer();
+        const res = await window.mammoth.extractRawText({ arrayBuffer });
+        if (res.value) {
+          const cleaned = cleanClientText(res.value);
+          if (cleaned.length >= 30) return cleaned;
+        }
+      }
+    } catch (e) {
+      console.warn('Mammoth client extraction failed:', e);
+    }
+  }
+
+  // 3. Fallback FileReader (only for plain text files)
+  if (fname.endsWith('.txt')) {
+    const raw = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result || '');
+      reader.onerror = () => resolve('');
+      reader.readAsText(file);
+    });
+    return cleanClientText(raw);
+  }
+
+  return '';
+}
+
+/**
  * Validates and classifies a document on the client-side.
  */
 export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf') {
-  const text = (resumeText || '').trim();
+  const text = cleanClientText(resumeText || '');
   const textLower = text.toLowerCase();
   const fnameLower = (filename || '').toLowerCase();
 
@@ -222,7 +306,7 @@ export function validateAndClassifyDocument(resumeText, filename = 'resume.pdf')
 }
 
 export function runClientAnalysis(resumeText, filename = 'resume.pdf', jobDescription = '', forceAnalysis = false) {
-  const text = resumeText || '';
+  const text = cleanClientText(resumeText || '');
   
   // 1. Validation Gate
   const validation = validateAndClassifyDocument(text, filename);

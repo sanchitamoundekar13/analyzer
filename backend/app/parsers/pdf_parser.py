@@ -139,5 +139,5 @@ def _fallback_pdfplumber(file_bytes: bytes) -> Tuple[str, int, bool]:
                     has_tables = True
             return text, num_pages, has_tables
     except Exception:
-        # Ultimate fallback
-        return file_bytes.decode("latin1", errors="ignore"), 1, False
+        # Ultimate fallback: return empty text if PDF cannot be parsed
+        return "", 1, False

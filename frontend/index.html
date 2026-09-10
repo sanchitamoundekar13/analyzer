@@ -43,6 +43,15 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- PDF.js and Mammoth for clean client-side PDF & DOCX text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
   <!-- React 18 & Babel for instant zero-setup standalone execution -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -104,10 +113,86 @@
     // --- SECTIONS ORDER SPECIFICATION ---
     const STANDARD_SECTION_ORDER = ['contact', 'summary', 'experience', 'projects', 'skills', 'education', 'certifications'];
 
+    // --- SANITIZE & CLEAN TEXT HELPER ---
+    function cleanClientText(rawText) {
+      if (!rawText) return '';
+      // Check if text is raw binary stream
+      if (rawText.startsWith('%PDF-') || rawText.startsWith('PK\x03\x04') || rawText.includes('\x00')) {
+        return '';
+      }
+      const nonPrintableMatches = rawText.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]/g);
+      if (nonPrintableMatches && nonPrintableMatches.length / rawText.length > 0.08) {
+        return '';
+      }
+      let text = rawText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]/g, ' ');
+      text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      text = text.replace(/^[ \t]*[\*\-\•\⁃\◦\‣\►\>]+\s*/gm, '• ');
+      text = text.replace(/[ \t]+/g, ' ');
+      text = text.replace(/\n{3,}/g, '\n\n');
+      return text.trim();
+    }
+
+    // --- CLIENT-SIDE PDF / DOCX TEXT EXTRACTOR ---
+    async function extractTextFromFile(file) {
+      if (!file) return '';
+      const fname = (file.name || '').toLowerCase();
+
+      // 1. PDF File extraction via PDF.js
+      if (fname.endsWith('.pdf')) {
+        try {
+          if (window.pdfjsLib) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const pageStr = content.items.map(it => it.str).join(' ');
+              text += pageStr + '\n\n';
+            }
+            const cleaned = cleanClientText(text);
+            if (cleaned.length >= 30) return cleaned;
+          }
+        } catch (e) {
+          console.warn('PDF.js client extraction failed:', e);
+        }
+      }
+
+      // 2. DOCX File extraction via Mammoth
+      if (fname.endsWith('.docx')) {
+        try {
+          if (window.mammoth) {
+            const arrayBuffer = await file.arrayBuffer();
+            const res = await window.mammoth.extractRawText({ arrayBuffer });
+            if (res.value) {
+              const cleaned = cleanClientText(res.value);
+              if (cleaned.length >= 30) return cleaned;
+            }
+          }
+        } catch (e) {
+          console.warn('Mammoth client extraction failed:', e);
+        }
+      }
+
+      // 3. Fallback FileReader (only for plain text files)
+      if (fname.endsWith('.txt')) {
+        const raw = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result || '');
+          reader.onerror = () => resolve('');
+          reader.readAsText(file);
+        });
+        return cleanClientText(raw);
+      }
+
+      return '';
+    }
+
     // --- 7-DIMENSION DETERMINISTIC SCORING ENGINE ---
     function analyzeResumeClient(rawText, filename = 'John_Doe_Resume.pdf', jd = '') {
-      const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const lower = rawText.toLowerCase();
+      const sanitized = cleanClientText(rawText);
+      const lines = (sanitized || DEFAULT_SAMPLE_RESUME).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const lower = (sanitized || DEFAULT_SAMPLE_RESUME).toLowerCase();
 
       // 1. Contact Info Extraction
       const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
@@ -459,18 +544,14 @@ Requirements:
       };
 
       // File upload handler
-      const handleFileUpload = (e) => {
+      const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setUploadedFileName(file.name);
         
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const content = event.target.result;
-          setResumeText(content);
-          handleRunAnalysis(content, jobText, file.name);
-        };
-        reader.readAsText(file);
+        const content = await extractTextFromFile(file);
+        setResumeText(content);
+        handleRunAnalysis(content, jobText, file.name);
       };
 
       // Generate Cover Letter

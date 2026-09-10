@@ -39,7 +39,19 @@ def clean_text(raw_text: str) -> str:
     if not raw_text:
         return ""
 
+    # Check for raw binary file stream signatures
+    if raw_text.startswith("%PDF-") or raw_text.startswith("PK\x03\x04"):
+        return ""
+
+    # Check non-printable ratio
+    non_printable = len(re.findall(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]', raw_text))
+    if len(raw_text) > 0 and (non_printable / len(raw_text)) > 0.08:
+        return ""
+
     text = unicodedata.normalize("NFKD", raw_text)
+    
+    # Strip unprintable control characters and unicode replacement chars
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFFFD]', ' ', text)
     
     # Replace ligatures and non-standard dashes/quotes
     for bad_char, replacement in LIGATURE_MAP.items():
