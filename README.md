@@ -4,7 +4,7 @@
 ---
 
 ##  Overview & Official Specifications
-**ResumeLens** is an AI/ML-powered, evidence-based resume analysis and career intelligence platform. It analyzes a candidate's resume, evaluates ATS layout compatibility, identifies relevant and missing skills, matches against target Job Descriptions (JD), extracts verified evidence, and provides explainable, non-hallucinating recommendations.
+**ResumeLens** is an AI/ML-powered, evidence-based resume analysis and career intelligence platform. It analyzes a candidate's resume, evaluates ATS layout compatibility,identifies relevant and missing skills, matches against target Job Descriptions (JD), extracts verified evidence, and provides explainable, non-hallucinating recommendations.
 
 >  **Product Requirements Document**: [PRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/PRD.md) (v1.0)  
 >  **Technical Requirements Document**: [TRD.md](file:///c:/Users/bhavi/Downloads/ResumeLens/TRD.md) (v1.0)  
